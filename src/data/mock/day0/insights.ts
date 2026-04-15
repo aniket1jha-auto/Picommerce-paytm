@@ -50,14 +50,14 @@ export const day0Insights: Insight[] = [
     minPhase: 'day0',
     title: 'SMS messages over 160 characters are billed as 2 units',
     description:
-      'Each SMS unit supports up to 160 characters. Messages exceeding this limit are automatically split into multiple units, effectively doubling (or more) your per-user cost. For example, a 187-character message costs ₹0.50/user instead of ₹0.25/user. Keep copy concise or consider WhatsApp for longer messages.',
+      'Each SMS unit supports up to 160 characters. Messages exceeding this limit are automatically split into multiple units, effectively doubling (or more) your per-user cost. For example, a 187-character message costs ₹0.30/user instead of ₹0.15/user. Keep copy concise or consider WhatsApp for longer messages.',
     tag: { label: 'Rule', color: 'gray' },
     evidence: {
       source: 'Platform configuration',
       dataPoints: [
         { label: 'SMS unit limit', value: '160 characters' },
-        { label: 'Cost per SMS unit', value: '₹0.25' },
-        { label: '2-unit message cost', value: '₹0.50' },
+        { label: 'Cost per SMS unit', value: '₹0.15' },
+        { label: '2-unit message cost', value: '₹0.30' },
       ],
     },
     context: 'channel_step',
@@ -88,15 +88,15 @@ export const day0Insights: Insight[] = [
     minPhase: 'day0',
     title: 'Budget calculator: estimate spend before you launch',
     description:
-      'Use the built-in budget calculator to project campaign costs based on audience size and channel mix. Unit costs — SMS: ₹0.25, WhatsApp: ₹0.65, RCS: ₹0.40, AI Voice Call: ₹2.50, Field Executive: ₹45. Projections update in real-time as you configure your campaign.',
+      'Use the built-in budget calculator to project campaign costs based on audience size and channel mix. Unit costs — SMS: ₹0.15, WhatsApp: ₹1.05, RCS: ₹0.20, AI Voice Call: ₹3.50, Field Executive: ₹45. Projections update in real-time as you configure your campaign.',
     tag: { label: 'Rule', color: 'gray' },
     evidence: {
       source: 'Platform configuration',
       dataPoints: [
-        { label: 'SMS unit cost', value: '₹0.25' },
-        { label: 'WhatsApp unit cost', value: '₹0.65' },
-        { label: 'RCS unit cost', value: '₹0.40' },
-        { label: 'AI Voice Call unit cost', value: '₹2.50' },
+        { label: 'SMS unit cost', value: '₹0.15' },
+        { label: 'WhatsApp unit cost', value: '₹1.05' },
+        { label: 'RCS unit cost', value: '₹0.20' },
+        { label: 'AI Voice Call unit cost', value: '₹3.50' },
         { label: 'Field Executive unit cost', value: '₹45.00' },
       ],
     },

@@ -100,10 +100,10 @@ const ROLE_COLORS: Record<'Admin' | 'Editor' | 'Viewer', string> = {
 // ---------- Billing data ----------
 
 const BILLING_USAGE_DAY30 = [
-  { channel: 'SMS', sent: 1_240_000, unitCost: 0.25 },
-  { channel: 'WhatsApp', sent: 680_000, unitCost: 0.65 },
-  { channel: 'RCS', sent: 320_000, unitCost: 0.4 },
-  { channel: 'AI Voice', sent: 95_000, unitCost: 1.5 },
+  { channel: 'SMS', sent: 1_240_000, unitCost: 0.15 },
+  { channel: 'WhatsApp', sent: 680_000, unitCost: 1.05 },
+  { channel: 'RCS', sent: 320_000, unitCost: 0.2 },
+  { channel: 'AI Voice', sent: 95_000, unitCost: 3.5 },
   { channel: 'Field Executive', sent: 4_200, unitCost: 45.0 },
 ];
 

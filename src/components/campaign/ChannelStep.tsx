@@ -57,6 +57,9 @@ function formatINR(amount: number): string {
 function getChannelCostLabel(channelId: ChannelType, unitCost: number): string {
   if (channelId === 'ai_voice') return `₹${unitCost.toFixed(2)}/call`;
   if (channelId === 'field_executive') return `₹${unitCost.toFixed(0)}/task`;
+  if (channelId === 'push_notification') return `₹${unitCost.toFixed(2)}/notif`;
+  if (channelId === 'in_app_banner') return `₹${unitCost.toFixed(2)}/banner`;
+  if (channelId === 'facebook_ads' || channelId === 'instagram_ads') return `₹150/1K impr`;
   return `₹${unitCost.toFixed(2)}/msg`;
 }
 
