@@ -252,17 +252,17 @@ export const day30Insights: Insight[] = [
     type: 'ml_tenant',
     category: 'channel',
     minPhase: 'day30',
-    title: 'In-app banners converted at 5.2% for active users — highest ROI channel at ₹0.02/impression',
+    title: 'In-app banners converted at 5.2% for active users — highest ROI channel at ₹0.10/impression',
     description:
-      'Your data from the Festive Cashback Campaign shows in-app banners achieving a 5.2% conversion rate among active app users — the highest ROI channel at just ₹0.02 per impression. For promotions targeting your app-active base, pairing in-app banners with push notifications delivers a cost-effective 1-2 punch before escalating to SMS or WhatsApp.',
+      'Your data from the Festive Cashback Campaign shows in-app banners achieving a 5.2% conversion rate among active app users — the highest ROI channel at just ₹0.10 per impression. For promotions targeting your app-active base, pairing in-app banners with push notifications delivers a cost-effective 1-2 punch before escalating to SMS or WhatsApp.',
     tag: { label: 'Your model', color: 'green' },
     confidence: { level: 'high', value: 0.86 },
     evidence: {
       source: 'Festive Cashback Campaign — in-app banner analysis',
       dataPoints: [
         { label: 'In-app banner conversion', value: '5.2%' },
-        { label: 'Cost per impression', value: '₹0.02' },
-        { label: 'Cost per conversion', value: '₹0.39' },
+        { label: 'Cost per impression', value: '₹0.10' },
+        { label: 'Cost per conversion', value: '₹1.92' },
         { label: 'Active users reached', value: 46080 },
         { label: 'Conversions generated', value: 2395 },
       ],

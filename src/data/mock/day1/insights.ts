@@ -128,7 +128,7 @@ export const day1Insights: Insight[] = [
     minPhase: 'day1',
     title: 'Adding WhatsApp before AI Voice reduces cost-per-conversion by ~22%',
     description:
-      'Platform model shows that waterfalls starting with WhatsApp before escalating to AI Voice Call achieve 22% lower cost-per-conversion than going directly to AI Voice. WhatsApp filters out responders cheaply (₹0.65/msg) before the expensive AI Voice step (₹2.50/call).',
+      'Platform model shows that waterfalls starting with WhatsApp before escalating to AI Voice Call achieve 22% lower cost-per-conversion than going directly to AI Voice. WhatsApp filters out responders cheaply (₹1.05/msg) before the expensive AI Voice step (₹3.50/call).',
     tag: { label: 'Platform model', color: 'amber' },
     confidence: { level: 'medium', value: 0.70 },
     evidence: {
@@ -141,7 +141,7 @@ export const day1Insights: Insight[] = [
       ],
       keyFactors: [
         'WhatsApp resolves 35-40% of users before AI Voice step',
-        'AI Voice is 3.8x more expensive per contact than WhatsApp',
+        'AI Voice is 3.3x more expensive per contact than WhatsApp',
         'Users who respond to WhatsApp first have 15% higher voice call pickup rate',
       ],
     },
@@ -176,7 +176,7 @@ export const day1Insights: Insight[] = [
     minPhase: 'day1',
     title: 'Push notifications show 3.5x higher engagement than SMS for app-installed users at 1/5th the cost',
     description:
-      'Platform model analysis shows that for users with your app installed and notifications enabled, push notifications achieve 3.5x higher engagement than SMS — at only ₹0.05/notification vs ₹0.25/SMS. For app-active segments, leading with push before falling back to SMS can significantly reduce cost-per-engagement.',
+      'Platform model analysis shows that for users with your app installed and notifications enabled, push notifications achieve 3.5x higher engagement than SMS — at only ₹0.10/notification vs ₹0.15/SMS. For app-active segments, leading with push before falling back to SMS can significantly reduce cost-per-engagement.',
     tag: { label: 'Platform model', color: 'amber' },
     confidence: { level: 'medium', value: 0.71 },
     evidence: {
@@ -184,8 +184,8 @@ export const day1Insights: Insight[] = [
       dataPoints: [
         { label: 'Push notification avg engagement', value: '7.3%' },
         { label: 'SMS avg engagement', value: '2.1%' },
-        { label: 'Push cost per message', value: '₹0.05' },
-        { label: 'SMS cost per message', value: '₹0.25' },
+        { label: 'Push cost per message', value: '₹0.10' },
+        { label: 'SMS cost per message', value: '₹0.15' },
         { label: 'Users with push enabled (est)', value: '55%' },
       ],
       keyFactors: [
