@@ -10,6 +10,9 @@ import { Audiences } from '@/pages/Audiences';
 import { Templates } from '@/pages/Templates';
 import { Settings } from '@/pages/Settings';
 import { ChannelConfig } from '@/pages/ChannelConfig';
+import { Agents } from '@/pages/Agents';
+import { AgentBuilder } from '@/pages/AgentBuilder';
+import { AgentDetail } from '@/pages/AgentDetail';
 
 export function AppRoutes() {
   return (
@@ -22,6 +25,9 @@ export function AppRoutes() {
       <Route path="/campaigns/:id/edit" element={<EditCampaign />} />
       <Route path="/audiences" element={<Audiences />} />
       <Route path="/channels" element={<ChannelConfig />} />
+      <Route path="/agents" element={<Agents />} />
+      <Route path="/agents/new" element={<AgentBuilder />} />
+      <Route path="/agents/:id" element={<AgentDetail />} />
       <Route path="/templates" element={<Templates />} />
       <Route path="/analytics" element={<Analytics />} />
       <Route path="/settings" element={<Settings />} />

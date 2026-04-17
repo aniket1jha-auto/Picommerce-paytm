@@ -3,12 +3,12 @@ import {
   LayoutDashboard,
   Megaphone,
   Users,
-
   Settings2,
   ChevronsLeft,
   ChevronsRight,
   Zap,
   Radio,
+  Bot,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
@@ -16,6 +16,7 @@ import { usePhaseStore } from '@/store/phaseStore';
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+  { to: '/agents', icon: Bot, label: 'Agents' },
   { to: '/audiences', icon: Users, label: 'Audiences' },
   { to: '/channels', icon: Radio, label: 'Channels' },
   { to: '/settings', icon: Settings2, label: 'Settings' },
