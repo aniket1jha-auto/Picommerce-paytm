@@ -38,7 +38,7 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 1. **Basic Info** - Name, description, type (Voice/Chat), use case (9 options)
 2. **Model & Voice** - 4 Azure GPT Realtime models, 10 voice options with descriptions
 3. **System Prompt** - Template library, personality traits, tone, role, objectives, guidelines
-4. **Conversation Flow** - Placeholder for XYFlow-based visual builder
+4. **Conversation Flow** - Visual drag-and-drop flow builder using XYFlow with 7 node types (Start, Message, Question, Condition, Action, Transfer, End), default sales flow, connectable handles, color-coded edges, minimap, zoom controls
 5. **Tools & Functions** - 5 built-in tools + custom function support
 6. **Advanced Settings** - LLM config (temperature, tokens), audio settings, conversation settings, compliance
 7. **Review & Deploy** - Config summary, test call simulation, environment selection
@@ -85,7 +85,6 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 
 ### P0 (Critical)
 - [ ] Campaign integration: Select agent when creating campaign with AI Voice channel
-- [ ] Visual Flow Builder (Step 4) using XYFlow
 
 ### P1 (Important)
 - [ ] Agent editing from detail page
