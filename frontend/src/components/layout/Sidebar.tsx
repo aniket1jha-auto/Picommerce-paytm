@@ -10,6 +10,9 @@ import {
   Radio,
   Bot,
   Wrench,
+  BarChart3,
+  ScrollText,
+  FileBarChart,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
@@ -41,9 +44,22 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    heading: 'PERFORMANCE',
+    items: [
+      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+      { to: '/logs', icon: ScrollText, label: 'Logs' },
+      { to: '/reports', icon: FileBarChart, label: 'Reports' },
+    ],
+  },
+  {
+    heading: 'ENGAGEMENT',
     items: [
       { to: '/audiences', icon: Users, label: 'Audiences' },
       { to: '/channels', icon: Radio, label: 'Channels' },
+    ],
+  },
+  {
+    items: [
       { to: '/settings', icon: Settings2, label: 'Settings' },
     ],
   },
