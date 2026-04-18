@@ -15,12 +15,19 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 
 ## What's Been Implemented (Jan 2026)
 
+### Sidebar Restructure
+- **Section headings**: "BUILD" label in light/muted text
+- **BUILD section**: Campaigns, Agents, Tools grouped under heading
+- **Other items**: Dashboard (top), Audiences, Channels, Settings (below BUILD)
+- Heading hidden when sidebar collapsed, replaced by thin divider
+
 ### New Pages
 | Route | Page | Description |
 |-------|------|-------------|
 | `/agents` | Agents List | Dashboard with stats cards and agent list |
 | `/agents/new` | Agent Builder | 7-step wizard for creating agents |
 | `/agents/:id` | Agent Detail | Evaluation dashboard with 4 tabs |
+| `/tools` | Tools | Vapi-inspired 2-panel tool configuration |
 
 ### Build Section - 7-Step Wizard
 1. **Basic Info** - Name, description, type (Voice/Chat), use case (9 options)
@@ -41,6 +48,14 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 - Live Test Console on agent detail page
 - Sidebar navigation with Agents item
 - Mock data: 3 agents, 3 transcripts, 2 A/B tests, 7 days metrics
+
+### Tools Section (Vapi-inspired)
+- **2-panel layout**: Tool list (left, 280px) + Tool configuration (right)
+- **8 Tools**: Custom Tool, Query, End Call, Voicemail, Transfer Call, Handoff, Send Text, API Request
+- **5 Integrations**: CRM, Google Calendar, Slack, Webhooks, Google Sheets
+- **Tool-specific config**: Context-aware fields per tool type (e.g., API Request shows URL/Method/Headers)
+- **Sections per tool**: Tool Settings, Knowledge Bases, Messages (Before/After/Error)
+- Searchable tool list, Create Tool button
 
 ## Prioritized Backlog
 
