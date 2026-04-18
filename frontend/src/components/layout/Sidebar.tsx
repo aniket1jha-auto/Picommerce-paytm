@@ -9,18 +9,79 @@ import {
   Zap,
   Radio,
   Bot,
+  Wrench,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
+import type { LucideIcon } from 'lucide-react';
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
-  { to: '/agents', icon: Bot, label: 'Agents' },
-  { to: '/audiences', icon: Users, label: 'Audiences' },
-  { to: '/channels', icon: Radio, label: 'Channels' },
-  { to: '/settings', icon: Settings2, label: 'Settings' },
-] as const;
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+interface NavSection {
+  heading?: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    ],
+  },
+  {
+    heading: 'BUILD',
+    items: [
+      { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+      { to: '/agents', icon: Bot, label: 'Agents' },
+      { to: '/tools', icon: Wrench, label: 'Tools' },
+    ],
+  },
+  {
+    items: [
+      { to: '/audiences', icon: Users, label: 'Audiences' },
+      { to: '/channels', icon: Radio, label: 'Channels' },
+      { to: '/settings', icon: Settings2, label: 'Settings' },
+    ],
+  },
+];
+
+function SidebarLink({
+  to,
+  icon: Icon,
+  label,
+  collapsed,
+}: NavItem & { collapsed: boolean }) {
+  return (
+    <NavLink
+      key={to}
+      to={to}
+      end={to === '/'}
+      className={({ isActive }) =>
+        [
+          'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+          isActive
+            ? 'border-l-[3px] border-cyan bg-white/10 text-white'
+            : 'border-l-[3px] border-transparent text-white/70 hover:bg-white/5 hover:text-white',
+        ].join(' ')
+      }
+    >
+      <Icon size={20} className="shrink-0" />
+      {!collapsed && (
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="whitespace-nowrap overflow-hidden"
+        >
+          {label}
+        </motion.span>
+      )}
+    </NavLink>
+  );
+}
 
 export function Sidebar() {
   const collapsed = usePhaseStore((s) => s.sidebarCollapsed);
@@ -50,32 +111,31 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="mt-2 flex flex-1 flex-col gap-1 px-2">
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              [
-                'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'border-l-[3px] border-cyan bg-white/10 text-white'
-                  : 'border-l-[3px] border-transparent text-white/70 hover:bg-white/5 hover:text-white',
-              ].join(' ')
-            }
-          >
-            <Icon size={20} className="shrink-0" />
-            {!collapsed && (
-              <motion.span
+      <nav className="mt-2 flex flex-1 flex-col gap-0.5 px-2">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className={sIdx > 0 ? 'mt-3' : ''}>
+            {section.heading && !collapsed && (
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="whitespace-nowrap overflow-hidden"
+                className="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40"
               >
-                {label}
-              </motion.span>
+                {section.heading}
+              </motion.div>
             )}
-          </NavLink>
+            {section.heading && collapsed && (
+              <div className="mx-auto my-1.5 h-px w-6 bg-white/15" />
+            )}
+            <div className="flex flex-col gap-0.5">
+              {section.items.map((item) => (
+                <SidebarLink
+                  key={item.to}
+                  {...item}
+                  collapsed={collapsed}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

@@ -1,0 +1,122 @@
+import type { ToolCategory, ToolDefinition } from '@/types/tool';
+
+export const TOOL_CATEGORIES: ToolCategory[] = [
+  {
+    id: 'tools',
+    label: 'Tools',
+    items: [
+      {
+        id: 'custom_tool',
+        name: 'Custom Tool',
+        description: 'Build your own custom tool with any API endpoint',
+        icon: 'Wrench',
+        color: '#7C3AED',
+        category: 'tools',
+      },
+      {
+        id: 'query',
+        name: 'Query',
+        description: 'Retrieve data from knowledge bases or databases',
+        icon: 'Search',
+        color: '#06B6D4',
+        category: 'tools',
+      },
+      {
+        id: 'end_call',
+        name: 'End Call',
+        description: 'Gracefully terminate a voice call',
+        icon: 'PhoneOff',
+        color: '#EF4444',
+        category: 'tools',
+      },
+      {
+        id: 'voicemail',
+        name: 'Voicemail',
+        description: 'Handle voicemail detection and leave messages',
+        icon: 'Voicemail',
+        color: '#8B5CF6',
+        category: 'tools',
+      },
+      {
+        id: 'transfer_call',
+        name: 'Transfer Call',
+        description: 'Transfer the call to another number or agent',
+        icon: 'PhoneForwarded',
+        color: '#10B981',
+        category: 'tools',
+      },
+      {
+        id: 'handoff',
+        name: 'Handoff',
+        description: 'Hand off the conversation to a human agent',
+        icon: 'UserCheck',
+        color: '#F59E0B',
+        category: 'tools',
+      },
+      {
+        id: 'send_text',
+        name: 'Send Text',
+        description: 'Send SMS or text messages during a call',
+        icon: 'MessageSquare',
+        color: '#3B82F6',
+        category: 'tools',
+      },
+      {
+        id: 'api_request',
+        name: 'API Request',
+        description: 'Make HTTP requests to external APIs',
+        icon: 'Globe',
+        color: '#EC4899',
+        category: 'tools',
+      },
+    ],
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    items: [
+      {
+        id: 'crm',
+        name: 'CRM',
+        description: 'Connect to your CRM system',
+        icon: 'Building2',
+        color: '#0EA5E9',
+        category: 'integrations',
+      },
+      {
+        id: 'google_calendar',
+        name: 'Google Calendar',
+        description: 'Manage calendar events and scheduling',
+        icon: 'Calendar',
+        color: '#4285F4',
+        category: 'integrations',
+      },
+      {
+        id: 'slack',
+        name: 'Slack',
+        description: 'Send notifications and messages to Slack',
+        icon: 'Hash',
+        color: '#E01E5A',
+        category: 'integrations',
+      },
+      {
+        id: 'webhooks',
+        name: 'Webhooks',
+        description: 'Configure webhook endpoints for events',
+        icon: 'Webhook',
+        color: '#6366F1',
+        category: 'integrations',
+      },
+      {
+        id: 'google_sheets',
+        name: 'Google Sheets',
+        description: 'Read and write data to Google Sheets',
+        icon: 'Sheet',
+        color: '#0F9D58',
+        category: 'integrations',
+      },
+    ],
+  },
+];
+
+export const ALL_TOOLS: ToolDefinition[] = TOOL_CATEGORIES.flatMap((c) => c.items);

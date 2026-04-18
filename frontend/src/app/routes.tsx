@@ -13,6 +13,7 @@ import { ChannelConfig } from '@/pages/ChannelConfig';
 import { Agents } from '@/pages/Agents';
 import { AgentBuilder } from '@/pages/AgentBuilder';
 import { AgentDetail } from '@/pages/AgentDetail';
+import { Tools } from '@/pages/Tools';
 
 export function AppRoutes() {
   return (
@@ -28,6 +29,7 @@ export function AppRoutes() {
       <Route path="/agents" element={<Agents />} />
       <Route path="/agents/new" element={<AgentBuilder />} />
       <Route path="/agents/:id" element={<AgentDetail />} />
+      <Route path="/tools" element={<Tools />} />
       <Route path="/templates" element={<Templates />} />
       <Route path="/analytics" element={<Analytics />} />
       <Route path="/settings" element={<Settings />} />
