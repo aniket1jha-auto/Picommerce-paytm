@@ -16,10 +16,13 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 ## What's Been Implemented (Jan 2026)
 
 ### Sidebar Restructure
-- **Section headings**: "BUILD" label in light/muted text
-- **BUILD section**: Campaigns, Agents, Tools grouped under heading
-- **Other items**: Dashboard (top), Audiences, Channels, Settings (below BUILD)
-- Heading hidden when sidebar collapsed, replaced by thin divider
+- **Section headings**: BUILD, PERFORMANCE, ENGAGEMENT labels in light/muted text
+- **Dashboard** (standalone top)
+- **BUILD section**: Campaigns, Agents, Tools
+- **PERFORMANCE section**: Analytics, Logs, Reports
+- **ENGAGEMENT section**: Audiences, Channels
+- **Settings** (standalone bottom)
+- Headings hidden when sidebar collapsed, replaced by thin dividers
 
 ### New Pages
 | Route | Page | Description |
@@ -28,6 +31,8 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 | `/agents/new` | Agent Builder | 7-step wizard for creating agents |
 | `/agents/:id` | Agent Detail | Evaluation dashboard with 4 tabs |
 | `/tools` | Tools | Vapi-inspired 2-panel tool configuration |
+| `/logs` | Logs | Real-time activity feed with filters |
+| `/reports` | Reports | Performance dashboards, charts, saved reports |
 
 ### Build Section - 7-Step Wizard
 1. **Basic Info** - Name, description, type (Voice/Chat), use case (9 options)
@@ -56,6 +61,18 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 - **Tool-specific config**: Context-aware fields per tool type (e.g., API Request shows URL/Method/Headers)
 - **Sections per tool**: Tool Settings, Knowledge Bases, Messages (Before/After/Error)
 - Searchable tool list, Create Tool button
+
+### Logs Page
+- Real-time activity feed across agents, campaigns, and system events
+- Color-coded log levels: Success (green), Info (blue), Warning (amber), Error (red)
+- Expandable rows showing details and metadata tags
+- Filters: level (All/Success/Info/Warning/Error with counts), source (Agents/Campaigns/System)
+- Searchable, 10 mock log entries
+
+### Reports Page
+- **Overview tab**: 4 stat cards, Campaign Performance area chart, Agent Performance bar chart, Channel Distribution donut chart, Top Performing Assets
+- **Saved Reports tab**: 4 report cards (Weekly Campaign Summary, Agent Performance, Monthly ROI, Channel Effectiveness) with type tags and Export buttons
+- Export Report button
 
 ## Prioritized Backlog
 
