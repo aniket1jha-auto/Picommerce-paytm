@@ -1,5 +1,6 @@
 import { Info } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
+import { ConversationFlowBuilder } from '@/components/agents/flow/ConversationFlowBuilder';
 
 interface Props {
   config: AgentConfiguration;
@@ -8,35 +9,50 @@ interface Props {
   onPrev: () => void;
 }
 
-export function FlowStep({ config, onNext, onPrev }: Props) {
+export function FlowStep({ config, onSave, onNext, onPrev }: Props) {
+  const handleFlowChange = (flowConfig: { nodes: any[]; edges: any[] }) => {
+    onSave({
+      flow: {
+        nodes: flowConfig.nodes.map((n) => ({
+          id: n.id,
+          type: n.type?.replace('Node', '') || 'message',
+          position: n.position,
+          data: {
+            label: (n.data as any)?.label || '',
+            content: (n.data as any)?.content,
+            condition: (n.data as any)?.condition,
+            actionType: (n.data as any)?.actionType,
+            transferTo: (n.data as any)?.transferTo,
+          },
+        })),
+        edges: flowConfig.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          label: (e.data as any)?.label,
+        })),
+      },
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold text-text-primary mb-2">Conversation Flow Designer</h2>
         <p className="text-sm text-text-secondary">
-          Design the conversation path your agent will follow
+          Design the conversation path your agent will follow. Drag to move nodes, connect handles to create paths.
         </p>
       </div>
 
-      <div className="rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 p-12 text-center border-2 border-dashed border-gray-300">
-        <div className="max-w-md mx-auto">
-          <div className="text-4xl mb-4">🔄</div>
-          <h3 className="text-lg font-semibold text-text-primary mb-2">
-            Visual Flow Builder
-          </h3>
-          <p className="text-sm text-text-secondary mb-4">
-            The visual conversation flow designer with drag-and-drop nodes will be available in this space.
-            For now, your agent will follow a natural conversation flow based on the system prompt.
-          </p>
-          <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-left">
-            <Info size={16} className="text-blue-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-blue-800">
-              <strong>Coming Soon:</strong> Advanced flow builder with conditional logic, branching paths,
-              and custom actions. Your agent will use intelligent conversation handling in the meantime.
-            </p>
-          </div>
-        </div>
+      <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
+        <Info size={16} className="text-blue-600 mt-0.5 shrink-0" />
+        <p className="text-xs text-blue-800">
+          <strong>Tip:</strong> Click a node to select it, then use the handles (circles) to connect nodes.
+          Use the palette on the left to add new nodes. A default sales flow is provided as a starting point.
+        </p>
       </div>
+
+      <ConversationFlowBuilder onChange={handleFlowChange} />
 
       <div className="flex justify-between pt-4">
         <button
