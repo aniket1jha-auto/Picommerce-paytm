@@ -14,7 +14,6 @@ import { Agents } from '@/pages/Agents';
 import { AgentBuilder } from '@/pages/AgentBuilder';
 import { AgentDetail } from '@/pages/AgentDetail';
 import { Tools } from '@/pages/Tools';
-import { Logs } from '@/pages/Logs';
 import { Reports } from '@/pages/Reports';
 
 export function AppRoutes() {
@@ -32,7 +31,6 @@ export function AppRoutes() {
       <Route path="/agents/new" element={<AgentBuilder />} />
       <Route path="/agents/:id" element={<AgentDetail />} />
       <Route path="/tools" element={<Tools />} />
-      <Route path="/logs" element={<Logs />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/templates" element={<Templates />} />
       <Route path="/analytics" element={<Analytics />} />

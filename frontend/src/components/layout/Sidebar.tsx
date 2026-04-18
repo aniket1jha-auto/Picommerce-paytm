@@ -11,7 +11,6 @@ import {
   Bot,
   Wrench,
   BarChart3,
-  ScrollText,
   FileBarChart,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -47,7 +46,6 @@ const navSections: NavSection[] = [
     heading: 'PERFORMANCE',
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-      { to: '/logs', icon: ScrollText, label: 'Logs' },
       { to: '/reports', icon: FileBarChart, label: 'Reports' },
     ],
   },
