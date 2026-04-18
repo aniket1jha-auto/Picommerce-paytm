@@ -19,7 +19,7 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 - **Section headings**: BUILD, PERFORMANCE, ENGAGEMENT labels in light/muted text
 - **Dashboard** (standalone top)
 - **BUILD section**: Campaigns, Agents, Tools
-- **PERFORMANCE section**: Analytics, Logs, Reports
+- **PERFORMANCE section**: Analytics, Reports
 - **ENGAGEMENT section**: Audiences, Channels
 - **Settings** (standalone bottom)
 - Headings hidden when sidebar collapsed, replaced by thin dividers
@@ -61,6 +61,13 @@ Build on top of existing Outreach Manager repo (PiCommerceEnterprise) - add two 
 - **Tool-specific config**: Context-aware fields per tool type (e.g., API Request shows URL/Method/Headers)
 - **Sections per tool**: Tool Settings, Knowledge Bases, Messages (Before/After/Error)
 - Searchable tool list, Create Tool button
+
+### Analytics Page (Revamped)
+- **3-tab navigation**: Overview, Campaigns, Agents
+- **Overview tab**: KPIs, Cost vs Revenue chart, AI Recommendations panel (6 recommendations with expand/collapse, confidence bars, action links)
+- **Campaigns deep-dive**: Pill selector for campaigns, 5 KPIs, daily performance trend chart, channel breakdown grid, campaign-scoped AI recommendations
+- **Agents deep-dive**: Pill selector for agents, 5 KPIs, agent config summary, daily call volume bar chart, 3 quick-link cards (Evaluation, Failures, Prompt Enhancement), agent-scoped AI recommendations
+- AI recommendations are type-coded: opportunity (green), warning (amber), optimization (purple), insight (blue)
 
 ### Logs Page
 - Real-time activity feed across agents, campaigns, and system events
