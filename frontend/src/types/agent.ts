@@ -62,6 +62,14 @@ export interface CustomFunction {
   };
 }
 
+/** Ordered plain-language steps for the Instructions wizard step */
+export interface InstructionStep {
+  id: string;
+  instruction: string;
+  transitionCondition: string;
+  attachedToolIds: string[];
+}
+
 export interface AgentConfiguration {
   // Step 1: Basic Info
   name: string;
@@ -91,17 +99,19 @@ export interface AgentConfiguration {
     agent: string;
   }[];
 
-  // Step 4: Conversation Flow
+  // Step 4: Instructions (conversation steps + global tools; legacy flow retained)
+  instructionSteps: InstructionStep[];
+  globalToolIds: string[];
+
   flow: {
     nodes: FlowNode[];
     edges: FlowEdge[];
   };
 
-  // Step 5: Tools & Functions
   builtInTools: string[];
   customFunctions: CustomFunction[];
 
-  // Step 6: Advanced Settings
+  // Step 5: Advanced Settings (renumbered from former step 6)
   audioConfig: {
     inputFormat: AudioFormat;
     outputFormat: AudioFormat;
@@ -129,7 +139,7 @@ export interface AgentConfiguration {
     tcpaCompliance: boolean;
   };
 
-  // Step 7: Deployment
+  // Step 6: Review & Deploy (renumbered from former step 7)
   webhookUrl?: string;
   environment: 'test' | 'production';
 }

@@ -183,12 +183,15 @@ interface CampaignWizardProps {
 export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
-  const [campaignData, setCampaignData] = useState<CampaignData>({
+  const [campaignData, setCampaignData] = useState<CampaignData>(() => ({
     ...INITIAL_DATA,
     ...initialData,
     goal: { ...INITIAL_DATA.goal, ...initialData?.goal },
+    schedule: { ...INITIAL_DATA.schedule, ...initialData?.schedule },
     highIntent: { ...INITIAL_DATA.highIntent, ...initialData?.highIntent },
-  });
+    content: { ...INITIAL_DATA.content, ...initialData?.content },
+    voiceConfig: { ...INITIAL_DATA.voiceConfig, ...initialData?.voiceConfig },
+  }));
 
   const totalSteps = STEPS.length;
   const isLastStep = currentStep === totalSteps;

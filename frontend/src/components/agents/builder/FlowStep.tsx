@@ -9,7 +9,7 @@ interface Props {
   onPrev: () => void;
 }
 
-export function FlowStep({ config, onSave, onNext, onPrev }: Props) {
+export function FlowStep({ config: _config, onSave, onNext, onPrev }: Props) {
   const handleFlowChange = (flowConfig: { nodes: any[]; edges: any[] }) => {
     onSave({
       flow: {

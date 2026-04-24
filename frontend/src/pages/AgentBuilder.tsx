@@ -5,8 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { BasicInfoStep } from '@/components/agents/builder/BasicInfoStep';
 import { ModelVoiceStep } from '@/components/agents/builder/ModelVoiceStep';
 import { PromptStep } from '@/components/agents/builder/PromptStep';
-import { FlowStep } from '@/components/agents/builder/FlowStep';
-import { ToolsStep } from '@/components/agents/builder/ToolsStep';
+import { InstructionsStep } from '@/components/agents/builder/InstructionsStep';
 import { AdvancedStep } from '@/components/agents/builder/AdvancedStep';
 import { ReviewStep } from '@/components/agents/builder/ReviewStep';
 import { useAgentStore } from '@/store/agentStore';
@@ -16,10 +15,9 @@ const STEPS = [
   { id: 1, name: 'Basic Info', component: BasicInfoStep },
   { id: 2, name: 'Model & Voice', component: ModelVoiceStep },
   { id: 3, name: 'System Prompt', component: PromptStep },
-  { id: 4, name: 'Conversation Flow', component: FlowStep },
-  { id: 5, name: 'Tools & Functions', component: ToolsStep },
-  { id: 6, name: 'Advanced Settings', component: AdvancedStep },
-  { id: 7, name: 'Review & Deploy', component: ReviewStep },
+  { id: 4, name: 'Instructions', component: InstructionsStep },
+  { id: 5, name: 'Advanced Settings', component: AdvancedStep },
+  { id: 6, name: 'Review & Deploy', component: ReviewStep },
 ];
 
 const DEFAULT_CONFIG: AgentConfiguration = {
@@ -40,6 +38,15 @@ const DEFAULT_CONFIG: AgentConfiguration = {
     dos: [],
     donts: [],
   },
+  instructionSteps: [
+    {
+      id: 'ins-default-1',
+      instruction: '',
+      transitionCondition: '',
+      attachedToolIds: [],
+    },
+  ],
+  globalToolIds: [],
   flow: {
     nodes: [],
     edges: [],

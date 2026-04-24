@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Play, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Search, Play } from 'lucide-react';
 import { useAgentStore } from '@/store/agentStore';
 import type { CallTranscript, SentimentType } from '@/types/agent';
 

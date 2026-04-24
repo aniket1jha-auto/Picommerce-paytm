@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Users, TrendingUp, BarChart2, Plus, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Toast } from '@/components/common/Toast';
+import { CreateSegmentModal } from '@/components/audience/CreateSegmentModal';
 import { usePhaseData } from '@/hooks/usePhaseData';
 import { formatCount, formatPercent } from '@/utils/format';
 import type { Segment, DataSource } from '@/types';
@@ -146,9 +147,21 @@ function SegmentCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-text-primary">
-            {segment.name}
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-sm font-semibold text-text-primary">
+              {segment.name}
+            </h3>
+            {segment.segmentSource === 'rule-based' && (
+              <span className="shrink-0 rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                Rule-based
+              </span>
+            )}
+            {segment.segmentSource === 'ai' && (
+              <span className="shrink-0 rounded-full bg-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-cyan">
+                AI
+              </span>
+            )}
+          </div>
           <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">
             {segment.description}
           </p>
@@ -410,8 +423,15 @@ function DataSourcesSection({
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export function Audiences() {
-  const { segments, dataSources, isDay0, isDay30 } = usePhaseData();
+  const { segments, dataSources, campaigns, isDay0, isDay30 } = usePhaseData();
   const [toast, setToast] = useState<string | null>(null);
+  const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
+  const [customSegments, setCustomSegments] = useState<Segment[]>([]);
+
+  const allSegments = useMemo(
+    () => [...customSegments, ...segments],
+    [customSegments, segments],
+  );
 
   // Compute total users from data sources (sum of recordCounts or segment sizes)
   const totalUsers = dataSources.reduce(
@@ -420,7 +440,7 @@ export function Audiences() {
   );
 
   // Compute reachable breakdown by channel using segments
-  const reachableTotals = segments.reduce(
+  const reachableTotals = allSegments.reduce(
     (acc, seg) => {
       if (!seg.reachability) return acc;
       for (const ch of REACHABILITY_CHANNELS) {
@@ -446,7 +466,8 @@ export function Audiences() {
         actions={
           !isDay0 ? (
             <button
-              onClick={() => setToast('Segment builder coming soon')}
+              type="button"
+              onClick={() => setCreateSegmentOpen(true)}
               className="flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
             >
               <Plus size={16} />
@@ -522,7 +543,7 @@ export function Audiences() {
                 </p>
               </div>
               <p className="mt-2 text-2xl font-semibold text-text-primary">
-                {segments.length}
+                {allSegments.length}
               </p>
               <p className="mt-0.5 text-xs text-text-secondary">
                 ready for campaigns
@@ -572,11 +593,11 @@ export function Audiences() {
                 Saved Segments
               </h2>
               <span className="text-sm text-text-secondary">
-                {segments.length} segment{segments.length !== 1 ? 's' : ''}
+                {allSegments.length} segment{allSegments.length !== 1 ? 's' : ''}
               </span>
             </div>
 
-            {segments.length === 0 ? (
+            {allSegments.length === 0 ? (
               <div className="mt-4">
                 <EmptyState
                   icon={Users}
@@ -586,7 +607,7 @@ export function Audiences() {
               </div>
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {segments.map((segment) => (
+                {allSegments.map((segment) => (
                   <SegmentCard
                     key={segment.id}
                     segment={segment}
@@ -598,6 +619,17 @@ export function Audiences() {
           </div>
         </>
       )}
+
+      <CreateSegmentModal
+        open={createSegmentOpen}
+        onClose={() => setCreateSegmentOpen(false)}
+        campaigns={campaigns}
+        onSave={(segment) => {
+          setCustomSegments((prev) => [segment, ...prev]);
+          setCreateSegmentOpen(false);
+          setToast('Segment saved');
+        }}
+      />
 
       <Toast
         message={toast ?? ''}

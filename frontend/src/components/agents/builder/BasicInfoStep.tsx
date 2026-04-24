@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { AgentConfiguration } from '@/types/agent';
 import { USE_CASE_OPTIONS } from '@/data/agentConstants';
 

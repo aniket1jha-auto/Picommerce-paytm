@@ -74,7 +74,7 @@ function SuggestionCard({ suggestion }: { suggestion: PromptSuggestion }) {
   );
 }
 
-export function PromptEnhancement({ agentId }: Props) {
+export function PromptEnhancement({ agentId: _agentId }: Props) {
   const suggestions = mockPromptSuggestions;
   const highPriority = suggestions.filter((s) => s.severity === 'high');
   const mediumPriority = suggestions.filter((s) => s.severity === 'medium');

@@ -4,14 +4,15 @@ import {
   Megaphone,
   Users,
   Settings2,
+  Plug2,
   ChevronsLeft,
   ChevronsRight,
-  Zap,
   Radio,
   Bot,
   Wrench,
   BarChart3,
   FileBarChart,
+  Lightbulb,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
@@ -54,10 +55,13 @@ const navSections: NavSection[] = [
     items: [
       { to: '/audiences', icon: Users, label: 'Audiences' },
       { to: '/channels', icon: Radio, label: 'Channels' },
+      { to: '/content-ideas', icon: Lightbulb, label: 'Content & Ideas' },
     ],
   },
   {
+    heading: 'SETTINGS',
     items: [
+      { to: '/settings/integrations', icon: Plug2, label: 'Integrations' },
       { to: '/settings', icon: Settings2, label: 'Settings' },
     ],
   },
@@ -73,7 +77,7 @@ function SidebarLink({
     <NavLink
       key={to}
       to={to}
-      end={to === '/'}
+      end={to === '/' || to === '/settings'}
       className={({ isActive }) =>
         [
           'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
@@ -107,19 +111,29 @@ export function Sidebar() {
       animate={{ width: collapsed ? 64 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
     >
-      {/* Brand */}
+      {/* Brand — π mark + Commerce (Pi-commerce) */}
       <div className="flex h-16 items-center gap-3 px-4 shrink-0">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-cyan">
-          <Zap size={18} className="text-white" />
+        <div
+          className={[
+            'flex shrink-0 items-center justify-center rounded-lg bg-cyan font-serif font-semibold leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+            collapsed
+              ? 'h-8 min-w-8 px-1 text-[1.125rem]'
+              : 'h-10 min-w-10 px-2 text-[1.625rem] sm:text-[1.75rem]',
+          ].join(' ')}
+          aria-hidden
+        >
+          π
         </div>
         {!collapsed && (
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="text-sm font-semibold whitespace-nowrap overflow-hidden"
+            className="min-w-0 overflow-hidden whitespace-nowrap"
           >
-            Outreach Manager
+            <span className="inline-block border-b border-cyan/40 pb-0.5 text-[15px] font-semibold tracking-[0.08em] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.2)] sm:text-[1.05rem]">
+              Commerce
+            </span>
           </motion.span>
         )}
       </div>

@@ -7,14 +7,11 @@ import {
   Bot,
   Sparkles,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
   AlertTriangle,
   Lightbulb,
   Target,
   Zap,
-  Clock,
-  DollarSign,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -39,7 +36,6 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { KPIBar } from '@/components/analytics/KPIBar';
 import { CostRevenueChart } from '@/components/analytics/CostRevenueChart';
 import { ChannelIcon } from '@/components/common/ChannelIcon';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { InlineInsight } from '@/components/ai/InlineInsight';
 import { formatINR, formatCount, formatPercent, formatROI } from '@/utils/format';
@@ -565,7 +561,7 @@ function AgentDeepDive() {
 }
 
 export function Analytics() {
-  const { campaigns, analytics, isDay0, isDay1 } = usePhaseData();
+  const { campaigns, isDay0, isDay1 } = usePhaseData();
   const allInsights = useInsights('analytics');
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());

@@ -14,7 +14,6 @@ import {
   Hash,
   Webhook,
   Sheet,
-  ChevronRight,
   Database,
   MessageCircle,
   Settings,

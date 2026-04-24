@@ -106,11 +106,15 @@ export interface Insight {
   impactValue?: number;
 }
 
+export type SegmentSource = 'rule-based' | 'ai';
+
 export interface Segment {
   id: string;
   name: string;
   description: string;
   size: number;
+  /** How the segment was created — shown as a badge on cards */
+  segmentSource?: SegmentSource;
   filters?: string;
   reachability?: {
     sms: number;

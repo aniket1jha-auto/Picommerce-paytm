@@ -23,7 +23,7 @@ export function MinWidthGuard() {
       <h2 className="text-xl font-semibold">Desktop Browser Required</h2>
       <p className="mt-3 max-w-md text-sm text-white/70">
         Please use a desktop browser (1280px+) for the best experience with
-        Outreach Manager.
+        Pi-commerce.
       </p>
     </div>
   );

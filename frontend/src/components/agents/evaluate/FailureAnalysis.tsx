@@ -49,7 +49,7 @@ function FailureCard({ pattern }: { pattern: FailurePattern }) {
   );
 }
 
-export function FailureAnalysis({ agentId }: Props) {
+export function FailureAnalysis({ agentId: _agentId }: Props) {
   const patterns = mockFailurePatterns;
   const totalFailures = patterns.reduce((sum, p) => sum + p.count, 0);
 

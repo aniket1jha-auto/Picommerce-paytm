@@ -21,11 +21,20 @@ export const mockAgents: Agent[] = [
         dos: ['Listen actively', 'Ask qualifying questions', 'Highlight value'],
         donts: ['Be pushy', 'Overpromise', 'Ignore objections'],
       },
+      instructionSteps: [
+        {
+          id: 'mock-s1',
+          instruction: 'Introduce the product and qualify budget authority.',
+          transitionCondition: '',
+          attachedToolIds: ['query'],
+        },
+      ],
+      globalToolIds: ['google_calendar', 'crm'],
       flow: {
         nodes: [],
         edges: [],
       },
-      builtInTools: ['calendar_booking', 'crm_integration'],
+      builtInTools: ['google_calendar', 'crm', 'query'],
       customFunctions: [],
       audioConfig: {
         inputFormat: 'pcm16',
@@ -89,11 +98,20 @@ export const mockAgents: Agent[] = [
         dos: ['Show empathy', 'Provide clear steps', 'Confirm resolution'],
         donts: ['Rush customers', 'Make promises', 'Blame customers'],
       },
+      instructionSteps: [
+        {
+          id: 'mock-s2',
+          instruction: 'Acknowledge the issue and gather account details.',
+          transitionCondition: '',
+          attachedToolIds: ['crm'],
+        },
+      ],
+      globalToolIds: ['query', 'handoff'],
       flow: {
         nodes: [],
         edges: [],
       },
-      builtInTools: ['data_lookup', 'crm_integration'],
+      builtInTools: ['query', 'handoff', 'crm'],
       customFunctions: [],
       audioConfig: {
         inputFormat: 'pcm16',
@@ -157,11 +175,20 @@ export const mockAgents: Agent[] = [
         dos: ['Verify identity', 'Offer options', 'Send confirmations'],
         donts: ['Double-book', 'Skip verification', 'Rush callers'],
       },
+      instructionSteps: [
+        {
+          id: 'mock-s3',
+          instruction: 'Collect preferred date and time slots for the appointment.',
+          transitionCondition: '',
+          attachedToolIds: ['google_calendar'],
+        },
+      ],
+      globalToolIds: ['google_calendar', 'send_text'],
       flow: {
         nodes: [],
         edges: [],
       },
-      builtInTools: ['calendar_booking'],
+      builtInTools: ['google_calendar', 'send_text'],
       customFunctions: [],
       audioConfig: {
         inputFormat: 'pcm16',
@@ -344,7 +371,7 @@ export const mockTranscripts: CallTranscript[] = [
         role: 'agent',
         content: 'I\'m sorry to hear that. I\'d be happy to help you get back into your account. Can you confirm the email address associated with your account?',
         timestamp: '2025-01-28T09:45:12Z',
-        sentiment: 'empathetic',
+        sentiment: 'positive',
         intent: 'information_gathering',
       },
       {

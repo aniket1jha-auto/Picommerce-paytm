@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Info } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
 import { PERSONALITY_TRAITS, TONE_OPTIONS, PROMPT_TEMPLATES } from '@/data/agentConstants';
 

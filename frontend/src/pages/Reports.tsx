@@ -8,9 +8,6 @@ import {
   Megaphone,
   DollarSign,
   Users,
-  Clock,
-  BarChart3,
-  ArrowUpRight,
   FileText,
   Bot,
 } from 'lucide-react';

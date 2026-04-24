@@ -1,4 +1,4 @@
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { mockPerformanceMetrics, mockIntentAnalysis } from '@/data/mock/agents';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 
@@ -6,7 +6,7 @@ interface Props {
   agentId: string;
 }
 
-export function PerformanceMetrics({ agentId }: Props) {
+export function PerformanceMetrics({ agentId: _agentId }: Props) {
   const metrics = mockPerformanceMetrics;
   const intents = mockIntentAnalysis;
 

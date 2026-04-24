@@ -1,15 +1,12 @@
 import { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
-  Phone,
   Megaphone,
   Bot,
   AlertTriangle,
   CheckCircle,
   XCircle,
   Clock,
-  ArrowUpRight,
   ChevronDown,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';

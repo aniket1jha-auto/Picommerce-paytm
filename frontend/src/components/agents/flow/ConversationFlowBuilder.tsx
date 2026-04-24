@@ -16,14 +16,12 @@ import {
 } from '@xyflow/react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
-  Plus,
   MessageSquare,
   HelpCircle,
   GitBranch,
   Zap,
   PhoneForwarded,
   Square,
-  Play,
   Trash2,
 } from 'lucide-react';
 import { StartNode } from './StartNode';

@@ -9,12 +9,14 @@ import { Analytics } from '@/pages/Analytics';
 import { Audiences } from '@/pages/Audiences';
 import { Templates } from '@/pages/Templates';
 import { Settings } from '@/pages/Settings';
+import { Integrations } from '@/pages/Integrations';
 import { ChannelConfig } from '@/pages/ChannelConfig';
 import { Agents } from '@/pages/Agents';
 import { AgentBuilder } from '@/pages/AgentBuilder';
 import { AgentDetail } from '@/pages/AgentDetail';
 import { Tools } from '@/pages/Tools';
 import { Reports } from '@/pages/Reports';
+import { ContentIdeas } from '@/pages/ContentIdeas';
 
 export function AppRoutes() {
   return (
@@ -27,6 +29,7 @@ export function AppRoutes() {
       <Route path="/campaigns/:id/edit" element={<EditCampaign />} />
       <Route path="/audiences" element={<Audiences />} />
       <Route path="/channels" element={<ChannelConfig />} />
+      <Route path="/content-ideas" element={<ContentIdeas />} />
       <Route path="/agents" element={<Agents />} />
       <Route path="/agents/new" element={<AgentBuilder />} />
       <Route path="/agents/:id" element={<AgentDetail />} />
@@ -34,6 +37,7 @@ export function AppRoutes() {
       <Route path="/reports" element={<Reports />} />
       <Route path="/templates" element={<Templates />} />
       <Route path="/analytics" element={<Analytics />} />
+      <Route path="/settings/integrations" element={<Integrations />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   );

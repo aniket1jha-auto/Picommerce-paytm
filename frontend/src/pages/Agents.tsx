@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus, Phone, MessageSquare, Play, Pause, TrendingUp, Clock } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Play, TrendingUp, Clock } from 'lucide-react';
 import { useAgentStore } from '@/store/agentStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { formatCount } from '@/utils/format';
