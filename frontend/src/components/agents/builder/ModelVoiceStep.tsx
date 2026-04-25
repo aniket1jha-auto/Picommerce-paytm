@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Info } from 'lucide-react';
 import type { AgentConfiguration, VoiceType, ModelType } from '@/types/agent';
 import { VOICE_OPTIONS, MODEL_OPTIONS } from '@/data/agentConstants';
+import { ChannelIdentityChat } from '@/components/agents/builder/ChannelIdentityChat';
 
 interface Props {
   config: AgentConfiguration;
@@ -10,7 +11,7 @@ interface Props {
   onPrev: () => void;
 }
 
-export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
+function VoiceModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
   const [model, setModel] = useState<ModelType>(config.model);
   const [voice, setVoice] = useState<VoiceType>(config.voice);
 
@@ -29,11 +30,8 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
       </div>
 
       <div className="space-y-6">
-        {/* Model Selection */}
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-3">
-            AI Model *
-          </label>
+          <label className="block text-sm font-medium text-text-primary mb-3">AI Model *</label>
           <div className="space-y-3">
             {MODEL_OPTIONS.map((option) => (
               <button
@@ -78,11 +76,8 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
           </div>
         </div>
 
-        {/* Voice Selection */}
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-3">
-            Voice *
-          </label>
+          <label className="block text-sm font-medium text-text-primary mb-3">Voice *</label>
           <div className="grid grid-cols-2 gap-3">
             {VOICE_OPTIONS.map((option) => (
               <button
@@ -97,9 +92,7 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
                 data-testid={`voice-${option.id}`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <span className="font-semibold text-text-primary capitalize">
-                    {option.name}
-                  </span>
+                  <span className="font-semibold text-text-primary capitalize">{option.name}</span>
                   {voice === option.id && (
                     <Check size={16} className="text-cyan" strokeWidth={2.5} />
                   )}
@@ -107,10 +100,7 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
                 <p className="text-xs text-text-secondary mb-2">{option.description}</p>
                 <div className="flex flex-wrap gap-1">
                   {option.characteristics.map((char, idx) => (
-                    <span
-                      key={idx}
-                      className="text-xs bg-cyan/10 text-cyan px-2 py-0.5 rounded"
-                    >
+                    <span key={idx} className="text-xs bg-cyan/10 text-cyan px-2 py-0.5 rounded">
                       {char}
                     </span>
                   ))}
@@ -121,7 +111,8 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-50 p-3">
             <Info size={16} className="text-blue-600 mt-0.5 shrink-0" />
             <p className="text-xs text-blue-800">
-              You'll be able to test the selected voice before deploying your agent in the Review step.
+              You&apos;ll be able to test the selected voice before deploying your agent in the
+              Review step.
             </p>
           </div>
         </div>
@@ -129,6 +120,7 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
 
       <div className="flex justify-between pt-4">
         <button
+          type="button"
           onClick={onPrev}
           className="inline-flex items-center gap-2 rounded-md border border-[#E5E7EB] px-6 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
           data-testid="model-voice-prev-btn"
@@ -136,6 +128,7 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
           Back
         </button>
         <button
+          type="button"
           onClick={handleNext}
           className="inline-flex items-center gap-2 rounded-md bg-cyan px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
           data-testid="model-voice-next-btn"
@@ -145,4 +138,11 @@ export function ModelVoiceStep({ config, onSave, onNext, onPrev }: Props) {
       </div>
     </div>
   );
+}
+
+export function ModelVoiceStep(props: Props) {
+  if (props.config.type === 'chat') {
+    return <ChannelIdentityChat {...props} />;
+  }
+  return <VoiceModelVoiceStep {...props} />;
 }

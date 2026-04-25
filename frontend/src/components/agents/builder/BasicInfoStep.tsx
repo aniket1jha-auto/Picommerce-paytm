@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { AgentConfiguration } from '@/types/agent';
+import type { AgentConfiguration, AgentType } from '@/types/agent';
 import { USE_CASE_OPTIONS } from '@/data/agentConstants';
+import { CHAT_USE_CASES } from '@/data/chatAgentConstants';
 
 interface Props {
   config: AgentConfiguration;
@@ -9,11 +10,18 @@ interface Props {
   isFirstStep: boolean;
 }
 
+function syncUseCaseForType(nextType: AgentType, prevUseCase: string): string {
+  if (nextType === 'chat') {
+    return CHAT_USE_CASES.some((u) => u.id === prevUseCase) ? prevUseCase : CHAT_USE_CASES[0].id;
+  }
+  return USE_CASE_OPTIONS.some((u) => u.id === prevUseCase) ? prevUseCase : USE_CASE_OPTIONS[0].id;
+}
+
 export function BasicInfoStep({ config, onSave, onNext }: Props) {
   const [name, setName] = useState(config.name);
   const [description, setDescription] = useState(config.description);
   const [type, setType] = useState(config.type);
-  const [useCase, setUseCase] = useState(config.useCase);
+  const [useCase, setUseCase] = useState(() => syncUseCaseForType(config.type, config.useCase));
 
   const isValid = name.trim() && description.trim();
 
@@ -67,7 +75,12 @@ export function BasicInfoStep({ config, onSave, onNext }: Props) {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setType('voice')}
+              onClick={() => {
+                const nextUseCase = syncUseCaseForType('voice', useCase);
+                setType('voice');
+                setUseCase(nextUseCase);
+                onSave({ type: 'voice', useCase: nextUseCase });
+              }}
               className={`flex-1 rounded-lg border-2 p-4 text-left transition-all ${
                 type === 'voice'
                   ? 'border-cyan bg-cyan/5'
@@ -83,18 +96,23 @@ export function BasicInfoStep({ config, onSave, onNext }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setType('chat')}
-              className={`flex-1 rounded-lg border-2 p-4 text-left transition-all opacity-50 cursor-not-allowed ${
+              onClick={() => {
+                const nextUseCase = syncUseCaseForType('chat', useCase);
+                setType('chat');
+                setUseCase(nextUseCase);
+                onSave({ type: 'chat', useCase: nextUseCase });
+              }}
+              className={`flex-1 rounded-lg border-2 p-4 text-left transition-all ${
                 type === 'chat'
                   ? 'border-cyan bg-cyan/5'
-                  : 'border-[#E5E7EB]'
+                  : 'border-[#E5E7EB] hover:border-cyan/50'
               }`}
-              disabled
+              data-testid="agent-type-chat"
             >
               <div className="text-2xl mb-2">💬</div>
-              <div className="font-semibold text-text-secondary">Chat Agent</div>
+              <div className="font-semibold text-text-primary">Chat Agent</div>
               <div className="text-xs text-text-secondary mt-1">
-                Coming soon
+                WhatsApp, SMS, RCS, and custom web messaging
               </div>
             </button>
           </div>
@@ -105,7 +123,7 @@ export function BasicInfoStep({ config, onSave, onNext }: Props) {
             Use Case *
           </label>
           <div className="grid grid-cols-3 gap-3">
-            {USE_CASE_OPTIONS.map((option) => (
+            {(type === 'chat' ? CHAT_USE_CASES : USE_CASE_OPTIONS).map((option) => (
               <button
                 key={option.id}
                 type="button"

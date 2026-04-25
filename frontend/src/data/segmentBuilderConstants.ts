@@ -24,7 +24,12 @@ export const ATTRIBUTE_GROUPS: { group: string; attributes: SegmentAttributeDef[
       },
       { id: 'outstanding_amount', label: 'Outstanding Amount', valueType: 'number' },
       { id: 'product_type', label: 'Product Type', valueType: 'text' },
-      { id: 'loan_stage', label: 'Loan Stage', valueType: 'text' },
+      {
+        id: 'loan_stage',
+        label: 'Loan Stage',
+        valueType: 'list',
+        listOptions: ['Application', 'Underwriting', 'Approved', 'Disbursed', 'Closed', 'NPA'],
+      },
       { id: 'emi_amount', label: 'EMI Amount', valueType: 'number' },
       { id: 'due_date', label: 'Due Date', valueType: 'date' },
     ],
@@ -32,8 +37,18 @@ export const ATTRIBUTE_GROUPS: { group: string; attributes: SegmentAttributeDef[
   {
     group: 'DEMOGRAPHICS',
     attributes: [
-      { id: 'state', label: 'State', valueType: 'text' },
-      { id: 'city', label: 'City', valueType: 'text' },
+      {
+        id: 'state',
+        label: 'State',
+        valueType: 'list',
+        listOptions: ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'Gujarat'],
+      },
+      {
+        id: 'city',
+        label: 'City',
+        valueType: 'list',
+        listOptions: ['Mumbai', 'Delhi NCR', 'Bangalore', 'Chennai', 'Pune', 'Hyderabad'],
+      },
       { id: 'age', label: 'Age', valueType: 'number' },
       { id: 'gender', label: 'Gender', valueType: 'list', listOptions: ['Male', 'Female', 'Other'] },
     ],
@@ -49,7 +64,12 @@ export const ATTRIBUTE_GROUPS: { group: string; attributes: SegmentAttributeDef[
       },
       { id: 'last_contacted', label: 'Last Contacted Date', valueType: 'date' },
       { id: 'prior_contacts', label: 'Number of Prior Contacts', valueType: 'number' },
-      { id: 'last_campaign_response', label: 'Last Campaign Response', valueType: 'text' },
+      {
+        id: 'last_campaign_response',
+        label: 'Last Campaign Response',
+        valueType: 'list',
+        listOptions: ['Responded', 'No Response', 'Clicked'],
+      },
       { id: 'days_since_txn', label: 'Days Since Last Transaction', valueType: 'number' },
     ],
   },
@@ -66,10 +86,10 @@ export function getAttributeById(id: string): SegmentAttributeDef | undefined {
 }
 
 export const OPERATORS: Record<SegmentValueType, string[]> = {
-  text: ['equals', 'not equals', 'contains', 'starts with', 'is empty'],
+  text: ['equals', 'not equals', 'contains', 'starts with', 'in list', 'not in list', 'is empty'],
   number: ['equals', 'greater than', 'less than', 'between', 'is empty'],
   date: ['is before', 'is after', 'is between', 'in last N days'],
-  list: ['in list', 'not in list'],
+  list: ['equals', 'in list', 'not in list'],
 };
 
 /** Channel dots — match Audiences segment cards */

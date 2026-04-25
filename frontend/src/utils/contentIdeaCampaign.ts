@@ -1,5 +1,6 @@
 import type { ChannelType } from '@/types';
 import type { CampaignData } from '@/components/campaign/CampaignWizard';
+import { buildPrebuiltJourney } from '@/components/campaign/journey/journeyTemplates';
 import type { ContentIdea } from '@/data/contentIdeas';
 import type { VoiceConfig } from '@/components/campaign/VoiceCallConfig';
 
@@ -68,8 +69,9 @@ export function buildCampaignDraftFromIdea(idea: ContentIdea): Partial<CampaignD
     segmentId: c.segmentId,
     channels: c.channels.length > 0 ? c.channels : (['whatsapp'] as ChannelType[]),
     schedule,
-    budget: '',
+    campaignType: 'simple_send',
     waterfallConfig: {},
+    journey: buildPrebuiltJourney('blank'),
     highIntent: {
       enabled: false,
       criteria: [],

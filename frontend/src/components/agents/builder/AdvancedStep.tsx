@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AgentConfiguration } from '@/types/agent';
 import { LANGUAGE_OPTIONS } from '@/data/agentConstants';
+import { AdvancedChatSettings } from '@/components/agents/builder/AdvancedChatSettings';
 
 interface Props {
   config: AgentConfiguration;
@@ -9,7 +10,7 @@ interface Props {
   onPrev: () => void;
 }
 
-export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
+function VoiceAdvancedStep({ config, onSave, onNext, onPrev }: Props) {
   const [temperature, setTemperature] = useState(config.llmConfig.temperature);
   const [maxTokens, setMaxTokens] = useState(config.llmConfig.maxTokens);
   const [silenceTimeout, setSilenceTimeout] = useState(config.conversationSettings.silenceTimeout);
@@ -43,7 +44,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
       <div>
         <h2 className="text-xl font-semibold text-text-primary mb-2">Advanced Settings</h2>
         <p className="text-sm text-text-secondary">
-          Fine-tune your agent's behavior and performance
+          Fine-tune your agent&apos;s behavior and performance
         </p>
       </div>
 
@@ -80,7 +81,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 max="4096"
                 step="256"
                 value={maxTokens}
-                onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
                 className="w-full"
                 data-testid="max-tokens-slider"
               />
@@ -104,7 +105,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 min="3"
                 max="15"
                 value={silenceTimeout}
-                onChange={(e) => setSilenceTimeout(parseInt(e.target.value))}
+                onChange={(e) => setSilenceTimeout(parseInt(e.target.value, 10))}
                 className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
                 data-testid="silence-timeout-input"
               />
@@ -119,16 +120,14 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 max="1800"
                 step="60"
                 value={maxDuration}
-                onChange={(e) => setMaxDuration(parseInt(e.target.value))}
+                onChange={(e) => setMaxDuration(parseInt(e.target.value, 10))}
                 className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
                 data-testid="max-duration-input"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
-              Language
-            </label>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Language</label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
@@ -181,9 +180,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 disabled
                 className="h-4 w-4 rounded border-gray-300 text-cyan focus:ring-cyan"
               />
-              <span className="text-sm text-text-secondary">
-                PII detection (Always enabled)
-              </span>
+              <span className="text-sm text-text-secondary">PII detection (Always enabled)</span>
             </label>
             <label className="flex items-center gap-3">
               <input
@@ -203,9 +200,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 disabled
                 className="h-4 w-4 rounded border-gray-300 text-cyan focus:ring-cyan"
               />
-              <span className="text-sm text-text-secondary">
-                TCPA compliance (Always enabled)
-              </span>
+              <span className="text-sm text-text-secondary">TCPA compliance (Always enabled)</span>
             </label>
           </div>
         </div>
@@ -213,6 +208,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
 
       <div className="flex justify-between pt-4">
         <button
+          type="button"
           onClick={onPrev}
           className="inline-flex items-center gap-2 rounded-md border border-[#E5E7EB] px-6 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
           data-testid="advanced-prev-btn"
@@ -220,6 +216,7 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
           Back
         </button>
         <button
+          type="button"
           onClick={handleNext}
           className="inline-flex items-center gap-2 rounded-md bg-cyan px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
           data-testid="advanced-next-btn"
@@ -229,4 +226,11 @@ export function AdvancedStep({ config, onSave, onNext, onPrev }: Props) {
       </div>
     </div>
   );
+}
+
+export function AdvancedStep(props: Props) {
+  if (props.config.type === 'chat') {
+    return <AdvancedChatSettings {...props} />;
+  }
+  return <VoiceAdvancedStep {...props} />;
 }

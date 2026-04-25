@@ -3,6 +3,7 @@ import { usePhaseStore } from '@/store/phaseStore';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MinWidthGuard } from '@/components/layout/MinWidthGuard';
 import { AppRoutes } from '@/app/routes';
+import { MediaLibraryProvider } from '@/context/MediaLibraryContext';
 
 export function App() {
   const sidebarCollapsed = usePhaseStore((s) => s.sidebarCollapsed);
@@ -26,7 +27,9 @@ export function App() {
         >
           {/* Page content — scrollable */}
           <div className="flex-1 overflow-y-auto px-8 py-5">
-            <AppRoutes />
+            <MediaLibraryProvider>
+              <AppRoutes />
+            </MediaLibraryProvider>
           </div>
         </motion.main>
       </div>

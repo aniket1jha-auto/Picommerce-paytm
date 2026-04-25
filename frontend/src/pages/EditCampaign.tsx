@@ -6,6 +6,7 @@ import { usePhaseData } from '@/hooks/usePhaseData';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { CampaignWizard } from '@/components/campaign/CampaignWizard';
+import { buildPrebuiltJourney } from '@/components/campaign/journey/journeyTemplates';
 import { Megaphone } from 'lucide-react';
 
 export function EditCampaign() {
@@ -30,6 +31,7 @@ export function EditCampaign() {
 
   // Pre-fill wizard data from campaign
   const initialData = {
+    campaignType: 'simple_send' as const,
     goal: {
       description: `Edit: ${campaign.name}`,
       goals: [
@@ -49,6 +51,7 @@ export function EditCampaign() {
     segmentId: campaign.audience.segmentId,
     channels: campaign.channels,
     waterfallConfig: {},
+    journey: buildPrebuiltJourney('blank'),
     content: {},
     schedule: {
       type: 'one-time' as const,
@@ -60,9 +63,6 @@ export function EditCampaign() {
       startDate: '',
       endDate: '',
     },
-    budget: campaign.budget.allocated > 0
-      ? `${(campaign.budget.allocated / 100000).toFixed(0)}L`
-      : '',
     voiceConfig: {},
     highIntent: {
       enabled: false,

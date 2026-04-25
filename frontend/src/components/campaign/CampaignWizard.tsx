@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import type { ChannelType } from '@/types';
-import { GoalStep } from './GoalStep';
+import { SetupStep } from './SetupStep';
 import { AudienceStep } from './AudienceStep';
 import { ReviewStep } from './ReviewStep';
-import { ChannelStep } from './ChannelStep';
-import { CampaignPlanStep } from './CampaignPlanStep';
+import { ContentScheduleStep } from './ContentScheduleStep';
+import { JourneyBuilderStep } from './journey/JourneyBuilderStep';
+import type { CampaignJourneyState } from './journey/journeyTypes';
+import { buildPrebuiltJourney } from './journey/journeyTemplates';
 
 export interface HighIntentCriterion {
   id: string;
@@ -27,7 +29,10 @@ export interface CampaignGoal {
   description: string;
 }
 
+export type CampaignType = 'simple_send' | 'journey';
+
 export interface CampaignData {
+  campaignType: CampaignType;
   goal: {
     description: string;       // overall campaign description
     goals: CampaignGoal[];     // multiple conversion goals
@@ -38,6 +43,7 @@ export interface CampaignData {
   segmentId: string;
   channels: ChannelType[];
   waterfallConfig: Record<string, unknown>;
+  journey: CampaignJourneyState;
   content: Partial<Record<ChannelType, unknown>>;
   schedule: {
     type: 'one-time' | 'recurring';
@@ -49,7 +55,6 @@ export interface CampaignData {
     startDate: string;
     endDate: string;
   };
-  budget: string;
   voiceConfig: Record<string, unknown>;
   highIntent: {
     enabled: boolean;
@@ -59,6 +64,7 @@ export interface CampaignData {
 }
 
 const INITIAL_DATA: CampaignData = {
+  campaignType: 'simple_send',
   goal: {
     description: '',
     goals: [],
@@ -69,6 +75,7 @@ const INITIAL_DATA: CampaignData = {
   segmentId: '',
   channels: [],
   waterfallConfig: {},
+  journey: buildPrebuiltJourney('blank'),
   content: {},
   schedule: {
     type: 'one-time',
@@ -80,7 +87,6 @@ const INITIAL_DATA: CampaignData = {
     startDate: '',
     endDate: '',
   },
-  budget: '',
   voiceConfig: {},
   highIntent: {
     enabled: false,
@@ -94,13 +100,15 @@ interface Step {
   shortLabel: string;
 }
 
-const STEPS: Step[] = [
-  { label: 'Goal', shortLabel: '1' },
-  { label: 'Audience', shortLabel: '2' },
-  { label: 'Channels', shortLabel: '3' },
-  { label: 'Journey', shortLabel: '4' },
-  { label: 'Review & Launch', shortLabel: '5' },
-];
+function wizardSteps(campaignType: CampaignType): Step[] {
+  const step3Label = campaignType === 'journey' ? 'Build Flow' : 'Content & Schedule';
+  return [
+    { label: 'Setup', shortLabel: '1' },
+    { label: 'Audience', shortLabel: '2' },
+    { label: step3Label, shortLabel: '3' },
+    { label: 'Review', shortLabel: '4' },
+  ];
+}
 
 interface StepNavProps {
   currentStep: number;
@@ -186,14 +194,23 @@ export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
   const [campaignData, setCampaignData] = useState<CampaignData>(() => ({
     ...INITIAL_DATA,
     ...initialData,
+    campaignType: initialData?.campaignType ?? INITIAL_DATA.campaignType,
     goal: { ...INITIAL_DATA.goal, ...initialData?.goal },
     schedule: { ...INITIAL_DATA.schedule, ...initialData?.schedule },
     highIntent: { ...INITIAL_DATA.highIntent, ...initialData?.highIntent },
     content: { ...INITIAL_DATA.content, ...initialData?.content },
     voiceConfig: { ...INITIAL_DATA.voiceConfig, ...initialData?.voiceConfig },
+    journey:
+      initialData?.journey?.nodes != null
+        ? {
+            nodes: initialData.journey.nodes,
+            edges: initialData.journey.edges ?? [],
+          }
+        : INITIAL_DATA.journey,
   }));
 
-  const totalSteps = STEPS.length;
+  const steps = wizardSteps(campaignData.campaignType);
+  const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps;
 
   function handleUpdate(updates: Partial<CampaignData>) {
@@ -224,27 +241,31 @@ export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
     <div className="flex flex-col gap-6">
       {/* Step navigation */}
       <div className="rounded-xl bg-white p-6 ring-1 ring-[#E5E7EB]">
-        <StepNav currentStep={currentStep} totalSteps={totalSteps} steps={STEPS} />
+        <StepNav currentStep={currentStep} totalSteps={totalSteps} steps={steps} />
       </div>
 
       {/* Step content */}
       <div className="overflow-hidden rounded-xl bg-white ring-1 ring-[#E5E7EB]">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={currentStep}
+            key={`${currentStep}-${campaignData.campaignType}`}
             custom={direction}
             variants={slideVariants}
             initial="enter"
             animate="center"
             exit="exit"
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="p-6"
+            className={
+              currentStep === 3 && campaignData.campaignType === 'journey' ? 'min-h-[560px]' : 'p-6'
+            }
           >
-            {currentStep === 1 && <GoalStep {...stepProps} />}
+            {currentStep === 1 && <SetupStep {...stepProps} />}
             {currentStep === 2 && <AudienceStep {...stepProps} />}
-            {currentStep === 3 && <ChannelStep {...stepProps} />}
-            {currentStep === 4 && <CampaignPlanStep {...stepProps} />}
-            {currentStep === 5 && <ReviewStep {...stepProps} />}
+            {currentStep === 3 && campaignData.campaignType === 'simple_send' && (
+              <ContentScheduleStep {...stepProps} />
+            )}
+            {currentStep === 3 && campaignData.campaignType === 'journey' && <JourneyBuilderStep {...stepProps} />}
+            {currentStep === 4 && <ReviewStep {...stepProps} />}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -1,12 +1,21 @@
-import { useMemo, useState } from 'react';
-import { Users, TrendingUp, BarChart2, Plus, ChevronDown, ChevronUp, Database } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Users,
+  TrendingUp,
+  BarChart2,
+  Plus,
+  Pencil,
+  Copy,
+  RefreshCw,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Toast } from '@/components/common/Toast';
-import { CreateSegmentModal } from '@/components/audience/CreateSegmentModal';
 import { usePhaseData } from '@/hooks/usePhaseData';
 import { formatCount, formatPercent } from '@/utils/format';
-import type { Segment, DataSource } from '@/types';
+import { formatUpdatedAgo } from '@/utils/formatRelative';
+import type { Segment } from '@/types';
 import type { ChannelType } from '@/types';
 
 const CHANNEL_LABELS: Record<ChannelType, string> = {
@@ -45,138 +54,175 @@ const CHANNEL_COLORS: Record<ChannelType, string> = {
   instagram_ads: '#E4405F',
 };
 
-// ── Data Source Connectors ──────────────────────────────────────────────────
-
-interface Connector {
-  name: string;
-  abbr: string;
-  color: string;
-  category: string;
-}
-
-interface ConnectorCategory {
-  label: string;
-  connectors: Connector[];
-}
-
-const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
-  {
-    label: 'Data Warehouses',
-    connectors: [
-      { name: 'Snowflake', abbr: 'Sf', color: '#29B5E8' },
-      { name: 'Google BigQuery', abbr: 'BQ', color: '#4285F4' },
-      { name: 'Amazon Redshift', abbr: 'RS', color: '#FF9900' },
-      { name: 'Databricks', abbr: 'DB', color: '#FF3621' },
-    ].map((c) => ({ ...c, category: 'Data Warehouse' })),
-  },
-  {
-    label: 'Streaming / Real-time',
-    connectors: [
-      { name: 'Apache Kafka', abbr: 'Kf', color: '#231F20' },
-      { name: 'Amazon Kinesis', abbr: 'Kn', color: '#FF9900' },
-      { name: 'Google Pub/Sub', abbr: 'PS', color: '#4285F4' },
-    ].map((c) => ({ ...c, category: 'Streaming' })),
-  },
-  {
-    label: 'Databases',
-    connectors: [
-      { name: 'Cassandra', abbr: 'Ca', color: '#1287B1' },
-      { name: 'MongoDB', abbr: 'Mo', color: '#47A248' },
-      { name: 'PostgreSQL', abbr: 'PG', color: '#336791' },
-      { name: 'MySQL', abbr: 'My', color: '#4479A1' },
-    ].map((c) => ({ ...c, category: 'Database' })),
-  },
-  {
-    label: 'Feature Stores',
-    connectors: [
-      { name: 'Feast', abbr: 'Fe', color: '#0F4C81' },
-      { name: 'Tecton', abbr: 'Te', color: '#5C2D91' },
-      { name: 'Internal Feature Store', abbr: 'IF', color: '#374151' },
-    ].map((c) => ({ ...c, category: 'Feature Store' })),
-  },
-  {
-    label: 'Segmentation Engines',
-    connectors: [
-      { name: 'CleverTap', abbr: 'CT', color: '#F26522' },
-      { name: 'MoEngage', abbr: 'ME', color: '#00A4BD' },
-      { name: 'Segment (Twilio)', abbr: 'Sg', color: '#52BD94' },
-      { name: 'WebEngage', abbr: 'WE', color: '#004CC4' },
-      { name: 'Braze', abbr: 'Br', color: '#2563EB' },
-    ].map((c) => ({ ...c, category: 'Segmentation Engine' })),
-  },
-  {
-    label: 'CRM / CDP',
-    connectors: [
-      { name: 'Salesforce', abbr: 'SF', color: '#00A1E0' },
-      { name: 'HubSpot', abbr: 'HS', color: '#FF7A59' },
-      { name: 'Zoho CRM', abbr: 'Zh', color: '#E42527' },
-    ].map((c) => ({ ...c, category: 'CRM / CDP' })),
-  },
-  {
-    label: 'File Upload',
-    connectors: [
-      { name: 'CSV Upload', abbr: 'CS', color: '#6B7280' },
-      { name: 'Google Sheets', abbr: 'GS', color: '#34A853' },
-      { name: 'SFTP', abbr: 'FT', color: '#374151' },
-    ].map((c) => ({ ...c, category: 'File Upload' })),
-  },
-];
-
-// ── Sub-components ──────────────────────────────────────────────────────────
-
 function getReachabilityEntries(
   reachability: Segment['reachability'],
 ): { channel: ChannelType; count: number }[] {
   if (!reachability) return [];
-  return REACHABILITY_CHANNELS.filter(
-    (ch) => reachability[ch] !== undefined,
-  ).map((ch) => ({ channel: ch, count: reachability[ch] as number }));
+  return REACHABILITY_CHANNELS.filter((ch) => reachability[ch] !== undefined).map((ch) => ({
+    channel: ch,
+    count: reachability[ch] as number,
+  }));
+}
+
+function rid(): string {
+  return `seg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type RecChannel = { key: ChannelType; label: string; count: number };
+
+const RECOMMENDATION_SEEDS: {
+  id: string;
+  name: string;
+  description: string;
+  size: number;
+  topChannels: RecChannel[];
+  refreshedLabel: string;
+}[] = [
+  {
+    id: 'rec-1',
+    name: 'High Propensity Payers — 30-60 DPD',
+    description: 'Contacts with increasing payment history who missed last EMI',
+    size: 18400,
+    topChannels: [
+      { key: 'sms', label: 'SMS', count: 17000 },
+      { key: 'whatsapp', label: 'WhatsApp', count: 14000 },
+      { key: 'ai_voice', label: 'AI Voice', count: 17000 },
+    ],
+    refreshedLabel: 'Refreshed 2 days ago',
+  },
+  {
+    id: 'rec-2',
+    name: 'Dormant Wallet Users — High Balance',
+    description: 'Users inactive 45+ days with wallet balance above ₹500',
+    size: 92000,
+    topChannels: [
+      { key: 'sms', label: 'SMS', count: 88000 },
+      { key: 'whatsapp', label: 'WhatsApp', count: 71000 },
+      { key: 'push_notification', label: 'Push', count: 65000 },
+    ],
+    refreshedLabel: 'Refreshed 2 days ago',
+  },
+  {
+    id: 'rec-3',
+    name: 'KYC Drop-off — Step 3',
+    description: 'Users who completed 2 of 3 KYC steps and did not return',
+    size: 34000,
+    topChannels: [
+      { key: 'sms', label: 'SMS', count: 33000 },
+      { key: 'whatsapp', label: 'WhatsApp', count: 29000 },
+      { key: 'ai_voice', label: 'AI Voice', count: 33000 },
+    ],
+    refreshedLabel: 'Refreshed 2 days ago',
+  },
+];
+
+function formatCsvImportDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
 }
 
 function SegmentCard({
   segment,
   isDay30,
+  isNew,
+  highlight,
+  onEdit,
+  onClone,
 }: {
   segment: Segment;
   isDay30: boolean;
+  isNew: boolean;
+  highlight?: boolean;
+  onEdit: () => void;
+  onClone: () => void;
 }) {
   const reachEntries = getReachabilityEntries(segment.reachability);
+  const campaigns = segment.usedInCampaigns ?? [];
+  const showChips = campaigns.slice(0, 2);
+  const more = campaigns.length - showChips.length;
+
+  const isCsv = segment.creationSource === 'csv' && segment.csvImport;
 
   return (
-    <div className="rounded-lg border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_3px_rgba(0,41,112,0.08)] transition-shadow hover:shadow-[0_4px_12px_rgba(0,41,112,0.12)]">
-      {/* Header */}
+    <div
+      id={`segment-card-${segment.id}`}
+      className={[
+        'rounded-lg border bg-white p-5 shadow-[0_1px_3px_rgba(0,41,112,0.08)] transition-shadow hover:shadow-[0_4px_12px_rgba(0,41,112,0.12)]',
+        highlight ? 'border-cyan ring-2 ring-cyan/40' : 'border-[#E5E7EB]',
+      ].join(' ')}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold text-text-primary">
-              {segment.name}
-            </h3>
-            {segment.segmentSource === 'rule-based' && (
+            <h3 className="truncate text-sm font-semibold text-text-primary">{segment.name}</h3>
+            {isNew && (
+              <span className="shrink-0 rounded-full bg-cyan/15 px-2 py-0.5 text-[10px] font-semibold text-cyan">
+                New
+              </span>
+            )}
+            {isCsv && (
+              <span className="shrink-0 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold text-[#2563EB]">
+                CSV Import
+              </span>
+            )}
+            {segment.segmentSource === 'rule-based' && !isCsv && (
               <span className="shrink-0 rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-text-secondary">
                 Rule-based
               </span>
             )}
             {segment.segmentSource === 'ai' && (
-              <span className="shrink-0 rounded-full bg-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-cyan">
+              <span className="shrink-0 rounded-full bg-[#F5F3FF] px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED]">
                 AI
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">
-            {segment.description}
-          </p>
+          {isCsv && segment.csvImport ? (
+            <p className="mt-0.5 text-xs text-text-secondary">
+              Imported from: {segment.csvImport.fileName} · {formatCsvImportDate(segment.csvImport.importedAt)}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">{segment.description}</p>
+          )}
+          {segment.segmentGoal && (
+            <p className="mt-1 text-[11px] font-medium text-text-secondary">Goal: {segment.segmentGoal}</p>
+          )}
+          <p className="mt-1 text-[11px] text-text-secondary">{formatUpdatedAgo(segment.lastUpdated)}</p>
         </div>
-        <div className="shrink-0 rounded-md bg-[#F3F4F6] px-2.5 py-1 text-xs font-semibold text-text-primary">
-          {formatCount(segment.size)} users
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-md p-1.5 text-text-secondary transition-colors hover:bg-[#F3F4F6] hover:text-text-primary"
+              aria-label="Edit segment"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={onClone}
+              className="rounded-md p-1.5 text-text-secondary transition-colors hover:bg-[#F3F4F6] hover:text-text-primary"
+              aria-label="Clone segment"
+            >
+              <Copy size={16} />
+            </button>
+          </div>
+          <div className="rounded-md bg-[#F3F4F6] px-2.5 py-1 text-xs font-semibold text-text-primary">
+            {formatCount(segment.size)} users
+          </div>
         </div>
       </div>
 
-      {/* Reachability breakdown */}
       {reachEntries.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-text-secondary">
-            Reachability
-          </p>
+          <p className="mb-2 text-xs font-medium text-text-secondary">Reachability</p>
           <div className="flex flex-wrap gap-2">
             {reachEntries.map(({ channel, count }) => (
               <div
@@ -187,19 +233,14 @@ function SegmentCard({
                   className="h-1.5 w-1.5 rounded-full"
                   style={{ backgroundColor: CHANNEL_COLORS[channel] }}
                 />
-                <span className="text-xs font-medium text-text-secondary">
-                  {CHANNEL_LABELS[channel]}
-                </span>
-                <span className="text-xs font-semibold text-text-primary">
-                  {formatCount(count)}
-                </span>
+                <span className="text-xs font-medium text-text-secondary">{CHANNEL_LABELS[channel]}</span>
+                <span className="text-xs font-semibold text-text-primary">{formatCount(count)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Day 30+ performance badges */}
       {isDay30 && segment.performance && (
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-md bg-[#F0FDF4] px-3 py-2.5">
           <div className="text-center">
@@ -217,11 +258,31 @@ function SegmentCard({
         </div>
       )}
 
-      {/* Filters pill */}
-      {segment.filters && (
+      <div className="mt-4 border-t border-[#F3F4F6] pt-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Used in</p>
+        {campaigns.length === 0 ? (
+          <p className="mt-1 text-xs text-text-secondary">Not used in any campaign</p>
+        ) : (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {showChips.map((c, i) => (
+              <span
+                key={`${c}-${i}`}
+                className="rounded-full border border-[#E5E7EB] bg-[#F9FAFB] px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+              >
+                {c}
+              </span>
+            ))}
+            {more > 0 && (
+              <span className="text-[10px] font-medium text-text-secondary">+{more} more</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {segment.filters && !isCsv && (
         <div className="mt-3">
           <code className="inline-block max-w-full truncate rounded bg-[#F3F4F6] px-2 py-0.5 text-[11px] text-text-secondary">
-            {segment.filters}
+            {segment.filters.length > 100 ? `${segment.filters.slice(0, 100)}…` : segment.filters}
           </code>
         </div>
       )}
@@ -229,217 +290,55 @@ function SegmentCard({
   );
 }
 
-const DATA_SOURCE_TYPE_LABELS: Record<DataSource['type'], string> = {
-  database: 'Database',
-  api: 'API',
-  csv: 'CSV',
-  crm: 'CRM',
-  warehouse: 'Warehouse',
-  feature_store: 'Feature Store',
-};
-
-function ConnectedSourceCard({
-  source,
-  onDisconnect,
-}: {
-  source: DataSource;
-  onDisconnect: (name: string) => void;
-}) {
-  const initial = source.name.charAt(0).toUpperCase();
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-[#E5E7EB] bg-white p-3 shadow-[0_1px_3px_rgba(0,41,112,0.06)]">
-      <div className="flex items-center gap-2">
-        {/* Logo placeholder */}
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EFF6FF] text-xs font-bold text-[#3B82F6]">
-          {initial}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-text-primary">
-            {source.name}
-          </p>
-          <span className="inline-block rounded bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-medium text-text-secondary">
-            {DATA_SOURCE_TYPE_LABELS[source.type]}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[#22C55E]" />
-          <span className="text-[10px] text-[#22C55E] font-medium">Live</span>
-        </div>
-      </div>
-
-      {source.recordCount !== undefined && (
-        <p className="text-xs text-text-secondary">
-          <span className="font-semibold text-text-primary">
-            {formatCount(source.recordCount)}
-          </span>{' '}
-          records
-        </p>
-      )}
-
-      {source.lastSynced && (
-        <p className="text-[10px] text-text-secondary">
-          Synced {source.lastSynced}
-        </p>
-      )}
-
-      <button
-        onClick={() => onDisconnect(source.name)}
-        className="mt-0.5 text-left text-[11px] font-medium text-[#EF4444] hover:underline"
-      >
-        Disconnect
-      </button>
-    </div>
-  );
-}
-
-function ConnectorPill({
-  connector,
-  onConnect,
-}: {
-  connector: Connector;
-  onConnect: (name: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-[#E5E7EB] bg-[#F9FAFB] px-2.5 py-2">
-      {/* Logo circle */}
-      <div
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-        style={{ backgroundColor: connector.color }}
-      >
-        {connector.abbr.charAt(0)}
-      </div>
-      <span className="flex-1 text-xs font-medium text-text-primary truncate">
-        {connector.name}
-      </span>
-      <button
-        onClick={() => onConnect(connector.name)}
-        className="shrink-0 rounded px-2 py-0.5 text-[11px] font-medium text-[#3B82F6] hover:bg-[#EFF6FF] transition-colors"
-      >
-        Connect
-      </button>
-    </div>
-  );
-}
-
-function DataSourcesSection({
-  dataSources,
-  isDay0,
-  onToast,
-}: {
-  dataSources: DataSource[];
-  isDay0: boolean;
-  onToast: (msg: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(isDay0);
-
-  return (
-    <div className="rounded-lg border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,41,112,0.08)]">
-      {/* Section header */}
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2">
-          <Database size={16} className="text-[#6366F1]" />
-          <h2 className="text-base font-semibold text-text-primary">
-            Data Sources
-          </h2>
-          {dataSources.length > 0 && (
-            <span className="rounded-full bg-[#EEF2FF] px-2 py-0.5 text-xs font-medium text-[#6366F1]">
-              {dataSources.length} connected
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onToast('Connection setup coming soon')}
-            className="flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-[#F9FAFB]"
-          >
-            <Plus size={12} />
-            Connect New Source
-          </button>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="flex items-center justify-center rounded-md p-1.5 text-text-secondary transition-colors hover:bg-[#F3F4F6]"
-            aria-label={expanded ? 'Collapse section' : 'Expand section'}
-          >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="border-t border-[#E5E7EB] px-5 pb-5 pt-4 flex flex-col gap-6">
-          {/* Connected sources */}
-          {dataSources.length > 0 && (
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                Connected ({dataSources.length})
-              </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {dataSources.map((ds) => (
-                  <ConnectedSourceCard
-                    key={ds.id}
-                    source={ds}
-                    onDisconnect={(name) =>
-                      onToast(`Disconnect for ${name} coming soon`)
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Available connectors by category */}
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-              Available Connectors
-            </p>
-            <div className="flex flex-col divide-y divide-[#F3F4F6] rounded-lg border border-[#E5E7EB] overflow-hidden">
-              {CONNECTOR_CATEGORIES.map((cat) => (
-                <div key={cat.label} className="bg-[#FAFAFA] px-4 py-3">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-                    {cat.label}
-                  </p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {cat.connectors.map((connector) => (
-                      <ConnectorPill
-                        key={connector.name}
-                        connector={connector}
-                        onConnect={(name) =>
-                          onToast(`Connection setup for ${name} coming soon`)
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Page ────────────────────────────────────────────────────────────────────
-
 export function Audiences() {
-  const { segments, dataSources, campaigns, isDay0, isDay30 } = usePhaseData();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { segments, dataSources, isDay0, isDay30 } = usePhaseData();
   const [toast, setToast] = useState<string | null>(null);
-  const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
   const [customSegments, setCustomSegments] = useState<Segment[]>([]);
+  const [newSegmentIds, setNewSegmentIds] = useState<Set<string>>(new Set());
+  const [recDismissed, setRecDismissed] = useState<Set<string>>(new Set());
+  const [recApproved, setRecApproved] = useState<Set<string>>(new Set());
+  const [flashSegmentId, setFlashSegmentId] = useState<string | null>(null);
+  const [scrollTargetId, setScrollTargetId] = useState<string | null>(null);
 
-  const allSegments = useMemo(
-    () => [...customSegments, ...segments],
-    [customSegments, segments],
-  );
+  const allSegments = useMemo(() => [...customSegments, ...segments], [customSegments, segments]);
 
-  // Compute total users from data sources (sum of recordCounts or segment sizes)
-  const totalUsers = dataSources.reduce(
-    (sum, ds) => sum + (ds.recordCount ?? 0),
-    0,
-  );
+  useEffect(() => {
+    const st = location.state as { savedSegment?: Segment; highlightSegmentId?: string } | null;
+    if (st?.savedSegment) {
+      const seg = st.savedSegment;
+      setCustomSegments((prev) => (prev.some((s) => s.id === seg.id) ? prev : [seg, ...prev]));
+      setNewSegmentIds((prev) => new Set(prev).add(seg.id));
+      setToast('Segment saved');
+      setScrollTargetId(st.highlightSegmentId ?? seg.id);
+      navigate(location.pathname, { replace: true, state: {} });
+      return;
+    }
+    if (st?.highlightSegmentId) {
+      setScrollTargetId(st.highlightSegmentId);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
-  // Compute reachable breakdown by channel using segments
+  useEffect(() => {
+    if (!scrollTargetId) return;
+    if (!allSegments.some((s) => s.id === scrollTargetId)) return;
+
+    const id = scrollTargetId;
+    setScrollTargetId(null);
+    setFlashSegmentId(id);
+
+    requestAnimationFrame(() => {
+      document.getElementById(`segment-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    const t = window.setTimeout(() => setFlashSegmentId(null), 2800);
+    return () => clearTimeout(t);
+  }, [scrollTargetId, allSegments]);
+
+  const totalUsers = dataSources.reduce((sum, ds) => sum + (ds.recordCount ?? 0), 0);
+
   const reachableTotals = allSegments.reduce(
     (acc, seg) => {
       if (!seg.reachability) return acc;
@@ -458,6 +357,43 @@ export function Audiences() {
     ? 'No data sources connected'
     : `${formatCount(totalUsers)} users synced across ${dataSources.length} source${dataSources.length !== 1 ? 's' : ''}`;
 
+  const visibleRecommendations = RECOMMENDATION_SEEDS.filter((r) => !recDismissed.has(r.id));
+
+  function cloneSegment(segment: Segment) {
+    const copy: Segment = {
+      ...segment,
+      id: rid(),
+      name: `${segment.name} (copy)`,
+      lastUpdated: new Date().toISOString(),
+      usedInCampaigns: [],
+      creationSource: 'filter',
+      csvImport: undefined,
+    };
+    setCustomSegments((prev) => [copy, ...prev]);
+    setToast('Segment cloned');
+  }
+
+  function approveRecommendation(seed: (typeof RECOMMENDATION_SEEDS)[0]) {
+    const reach: Segment['reachability'] = { sms: 0, whatsapp: 0 };
+    seed.topChannels.forEach((c) => {
+      (reach as Record<string, number>)[c.key] = c.count;
+    });
+    const seg: Segment = {
+      id: rid(),
+      name: seed.name,
+      description: seed.description,
+      size: seed.size,
+      segmentSource: 'rule-based',
+      creationSource: 'filter',
+      reachability: reach,
+      lastUpdated: new Date().toISOString(),
+      usedInCampaigns: [],
+    };
+    setCustomSegments((prev) => [seg, ...prev]);
+    setRecApproved((prev) => new Set(prev).add(seed.id));
+    setToast('Segment approved and saved');
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -465,14 +401,13 @@ export function Audiences() {
         subtitle={headerSubtitle}
         actions={
           !isDay0 ? (
-            <button
-              type="button"
-              onClick={() => setCreateSegmentOpen(true)}
-              className="flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
+            <Link
+              to="/audiences/segments/new"
+              className="inline-flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
             >
               <Plus size={16} />
               Create Segment
-            </button>
+            </Link>
           ) : undefined
         }
       />
@@ -486,33 +421,20 @@ export function Audiences() {
             ctaLabel="Go to Settings"
             ctaHref="/settings"
           />
-
-          {/* Data Sources section — shown even on Day 0 so users can explore connectors */}
-          <DataSourcesSection
-            dataSources={dataSources}
-            isDay0={isDay0}
-            onToast={setToast}
-          />
         </div>
       ) : (
         <>
-          {/* Summary bar */}
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_3px_rgba(0,41,112,0.08)]">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#EFF6FF]">
                   <Users size={16} className="text-[#3B82F6]" />
                 </div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Total Users Synced
-                </p>
+                <p className="text-xs font-medium text-text-secondary">Total Users Synced</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-text-primary">
-                {formatCount(totalUsers)}
-              </p>
+              <p className="mt-2 text-2xl font-semibold text-text-primary">{formatCount(totalUsers)}</p>
               <p className="mt-0.5 text-xs text-text-secondary">
-                across {dataSources.length} data source
-                {dataSources.length !== 1 ? 's' : ''}
+                across {dataSources.length} data source{dataSources.length !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -521,16 +443,10 @@ export function Audiences() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F0FDF4]">
                   <TrendingUp size={16} className="text-[#27AE60]" />
                 </div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Max Reachable
-                </p>
+                <p className="text-xs font-medium text-text-secondary">Max Reachable</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-text-primary">
-                {formatCount(totalReachable)}
-              </p>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                across all channels
-              </p>
+              <p className="mt-2 text-2xl font-semibold text-text-primary">{formatCount(totalReachable)}</p>
+              <p className="mt-0.5 text-xs text-text-secondary">across all channels</p>
             </div>
 
             <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_3px_rgba(0,41,112,0.08)]">
@@ -538,27 +454,17 @@ export function Audiences() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#FFF7ED]">
                   <BarChart2 size={16} className="text-[#F59E0B]" />
                 </div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Saved Segments
-                </p>
+                <p className="text-xs font-medium text-text-secondary">Saved Segments</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold text-text-primary">
-                {allSegments.length}
-              </p>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                ready for campaigns
-              </p>
+              <p className="mt-2 text-2xl font-semibold text-text-primary">{allSegments.length}</p>
+              <p className="mt-0.5 text-xs text-text-secondary">ready for campaigns</p>
             </div>
 
             <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_3px_rgba(0,41,112,0.08)]">
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs font-medium text-text-secondary">
-                  Reachable by Channel
-                </p>
+                <p className="text-xs font-medium text-text-secondary">Reachable by Channel</p>
                 <div className="flex flex-col gap-1">
-                  {REACHABILITY_CHANNELS.filter(
-                    (ch) => reachableTotals[ch] > 0,
-                  )
+                  {REACHABILITY_CHANNELS.filter((ch) => reachableTotals[ch] > 0)
                     .slice(0, 3)
                     .map((ch) => (
                       <div key={ch} className="flex items-center gap-1.5">
@@ -566,9 +472,7 @@ export function Audiences() {
                           className="h-1.5 w-1.5 rounded-full"
                           style={{ backgroundColor: CHANNEL_COLORS[ch] }}
                         />
-                        <span className="text-xs text-text-secondary">
-                          {CHANNEL_LABELS[ch]}
-                        </span>
+                        <span className="text-xs text-text-secondary">{CHANNEL_LABELS[ch]}</span>
                         <span className="ml-auto text-xs font-semibold text-text-primary">
                           {formatCount(reachableTotals[ch])}
                         </span>
@@ -579,19 +483,83 @@ export function Audiences() {
             </div>
           </div>
 
-          {/* Data Sources section */}
-          <DataSourcesSection
-            dataSources={dataSources}
-            isDay0={isDay0}
-            onToast={setToast}
-          />
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">Recommended for You</h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              AI-suggested segments based on your data and campaign history
+            </p>
+            <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+              {visibleRecommendations.map((rec) => {
+                const approved = recApproved.has(rec.id);
+                return (
+                  <div
+                    key={rec.id}
+                    className="flex w-[280px] shrink-0 flex-col rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_3px_rgba(0,41,112,0.08)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold leading-snug text-text-primary">{rec.name}</h3>
+                      <span className="shrink-0 rounded-md bg-[#F3F4F6] px-2 py-0.5 text-[11px] font-semibold text-text-primary">
+                        {formatCount(rec.size)}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-xs text-text-secondary">{rec.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {rec.topChannels.map(({ key, label, count }) => (
+                        <div
+                          key={key}
+                          className="flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#F9FAFB] px-2 py-0.5"
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: CHANNEL_COLORS[key] }}
+                          />
+                          <span className="text-[10px] font-medium text-text-secondary">{label}</span>
+                          <span className="text-[10px] font-semibold text-text-primary">{formatCount(count)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1 text-[10px] text-text-secondary">
+                        <RefreshCw size={11} />
+                        {rec.refreshedLabel}
+                      </span>
+                      <span
+                        className={[
+                          'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          approved
+                            ? 'bg-[#ECFDF5] text-[#059669]'
+                            : 'bg-[#FFFBEB] text-[#D97706]',
+                        ].join(' ')}
+                      >
+                        {approved ? 'Approved' : 'Awaiting review'}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={approved}
+                        onClick={() => approveRecommendation(rec)}
+                        className="flex-1 rounded-md bg-cyan px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-cyan/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Approve & Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRecDismissed((prev) => new Set(prev).add(rec.id))}
+                        className="rounded-md border border-transparent px-2 py-1.5 text-[11px] font-medium text-text-secondary hover:bg-[#F3F4F6]"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-          {/* Segments grid */}
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-text-primary">
-                Saved Segments
-              </h2>
+              <h2 className="text-base font-semibold text-text-primary">Saved Segments</h2>
               <span className="text-sm text-text-secondary">
                 {allSegments.length} segment{allSegments.length !== 1 ? 's' : ''}
               </span>
@@ -612,6 +580,10 @@ export function Audiences() {
                     key={segment.id}
                     segment={segment}
                     isDay30={isDay30}
+                    isNew={newSegmentIds.has(segment.id)}
+                    highlight={flashSegmentId === segment.id}
+                    onEdit={() => setToast('Segment editor coming soon')}
+                    onClone={() => cloneSegment(segment)}
                   />
                 ))}
               </div>
@@ -619,17 +591,6 @@ export function Audiences() {
           </div>
         </>
       )}
-
-      <CreateSegmentModal
-        open={createSegmentOpen}
-        onClose={() => setCreateSegmentOpen(false)}
-        campaigns={campaigns}
-        onSave={(segment) => {
-          setCustomSegments((prev) => [segment, ...prev]);
-          setCreateSegmentOpen(false);
-          setToast('Segment saved');
-        }}
-      />
 
       <Toast
         message={toast ?? ''}

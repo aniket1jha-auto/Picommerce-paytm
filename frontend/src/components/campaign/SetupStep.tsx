@@ -1,9 +1,9 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
-import type { CampaignData, CampaignGoal } from './CampaignWizard';
+import type { CampaignData, CampaignGoal, CampaignType } from './CampaignWizard';
 
-interface GoalStepProps {
+interface SetupStepProps {
   campaignData: CampaignData;
   onUpdate: (updates: Partial<CampaignData>) => void;
 }
@@ -42,15 +42,12 @@ function GoalCard({
 
   return (
     <div className="rounded-lg border border-[#E5E7EB] bg-white">
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-[#F3F4F6] px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan/10 text-[11px] font-bold text-cyan">
             {index + 1}
           </span>
-          <span className="text-sm font-semibold text-text-primary">
-            Goal {index + 1}
-          </span>
+          <span className="text-sm font-semibold text-text-primary">Goal {index + 1}</span>
           {goal.eventName && (
             <span className="rounded bg-[#F3F4F6] px-2 py-0.5 font-mono text-[11px] text-text-secondary">
               {goal.eventName}
@@ -70,7 +67,6 @@ function GoalCard({
       </div>
 
       <div className="flex flex-col gap-4 p-4">
-        {/* Conversion Event */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
             Conversion Event
@@ -87,9 +83,13 @@ function GoalCard({
             }}
             className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan"
           >
-            <option value="" disabled>Select a conversion event…</option>
+            <option value="" disabled>
+              Select a conversion event…
+            </option>
             {PRESET_EVENTS.map((ev) => (
-              <option key={ev.value} value={ev.value}>{ev.label}</option>
+              <option key={ev.value} value={ev.value}>
+                {ev.label}
+              </option>
             ))}
             <option value="__custom__">Custom event…</option>
           </select>
@@ -104,13 +104,30 @@ function GoalCard({
             />
           )}
         </div>
-
       </div>
     </div>
   );
 }
 
-export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
+const CAMPAIGN_TYPE_OPTIONS: {
+  id: CampaignType;
+  title: string;
+  description: string;
+}[] = [
+  {
+    id: 'simple_send',
+    title: 'Simple Send',
+    description: 'Send a one-time or recurring message to your audience across one or more channels.',
+  },
+  {
+    id: 'journey',
+    title: 'Automated Journey',
+    description:
+      'Build a multi-step flow with logic, waits, and AI agents that responds to user behavior.',
+  },
+];
+
+export function SetupStep({ campaignData, onUpdate }: SetupStepProps) {
   const goalData = campaignData.goal;
 
   function updateGoals(goals: CampaignGoal[]) {
@@ -149,23 +166,20 @@ export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
     onUpdate({ goal: { ...goalData, goalsOperator: op } });
   }
 
-
-  // Auto-add first goal if none exist
   if (goalData.goals.length === 0) {
     addGoal();
-    return null; // re-render with the goal added
+    return null;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-base font-semibold text-text-primary">Campaign Goal</h2>
+        <h2 className="text-base font-semibold text-text-primary">Campaign setup</h2>
         <p className="mt-1 text-sm text-text-secondary">
-          Name your campaign, define what you want to achieve, and set conversion goals.
+          Name your campaign, choose how it runs, define what you want to achieve, and set conversion goals.
         </p>
       </div>
 
-      {/* Campaign Name */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="campaign-name" className="text-sm font-medium text-text-primary">
           Campaign Name
@@ -180,7 +194,6 @@ export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
         />
       </div>
 
-      {/* Campaign Description */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="goal-description" className="text-sm font-medium text-text-primary">
           Campaign Description
@@ -195,7 +208,33 @@ export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
         />
       </div>
 
-      {/* Goals List */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-text-primary">Campaign Type</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {CAMPAIGN_TYPE_OPTIONS.map((opt) => {
+            const selected = campaignData.campaignType === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onUpdate({ campaignType: opt.id })}
+                className={[
+                  'flex flex-col rounded-xl border-2 p-4 text-left transition-all',
+                  selected
+                    ? 'border-cyan bg-cyan/[0.06] shadow-sm ring-1 ring-cyan/20'
+                    : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]',
+                ].join(' ')}
+              >
+                <span className={['text-sm font-semibold', selected ? 'text-cyan' : 'text-text-primary'].join(' ')}>
+                  {opt.title}
+                </span>
+                <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{opt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div>
@@ -218,7 +257,6 @@ export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
               onUpdate={(updated) => updateGoal(goal.id, updated)}
               onRemove={() => removeGoal(goal.id)}
             />
-            {/* AND/OR toggle between goals */}
             {idx < goalData.goals.length - 1 && (
               <div className="flex items-center justify-center gap-2 py-2">
                 <div className="h-px flex-1 bg-[#E5E7EB]" />
@@ -263,7 +301,6 @@ export function GoalStep({ campaignData, onUpdate }: GoalStepProps) {
           Add Another Goal
         </button>
       </div>
-
     </div>
   );
 }

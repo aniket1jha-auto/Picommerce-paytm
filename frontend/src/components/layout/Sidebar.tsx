@@ -11,8 +11,7 @@ import {
   Bot,
   Wrench,
   BarChart3,
-  FileBarChart,
-  Lightbulb,
+  Library,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
@@ -47,7 +46,6 @@ const navSections: NavSection[] = [
     heading: 'PERFORMANCE',
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-      { to: '/reports', icon: FileBarChart, label: 'Reports' },
     ],
   },
   {
@@ -55,7 +53,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/audiences', icon: Users, label: 'Audiences' },
       { to: '/channels', icon: Radio, label: 'Channels' },
-      { to: '/content-ideas', icon: Lightbulb, label: 'Content & Ideas' },
+      { to: '/content-library', icon: Library, label: 'Content Library' },
     ],
   },
   {

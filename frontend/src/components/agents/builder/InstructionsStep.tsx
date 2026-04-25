@@ -38,6 +38,7 @@ function buildLoanRecoverySampleSteps(): InstructionStepData[] {
       transitionCondition:
         'Move to the next step once the customer confirms their identity (last 4 digits of account or DOB).',
       attachedToolIds: ['query'],
+      quickReplies: [],
     },
     {
       id: newStepId(),
@@ -46,6 +47,7 @@ function buildLoanRecoverySampleSteps(): InstructionStepData[] {
       transitionCondition:
         'Proceed when the customer acknowledges the dues or asks how to pay.',
       attachedToolIds: ['send_text'],
+      quickReplies: [],
     },
     {
       id: newStepId(),
@@ -54,6 +56,7 @@ function buildLoanRecoverySampleSteps(): InstructionStepData[] {
       transitionCondition:
         'Move on once the customer picks an option or requests a supervisor.',
       attachedToolIds: ['transfer_call', 'api_request'],
+      quickReplies: [],
     },
     {
       id: newStepId(),
@@ -61,6 +64,7 @@ function buildLoanRecoverySampleSteps(): InstructionStepData[] {
         'Confirm next steps (payment link sent / callback scheduled), read disclaimers if required, and close politely.',
       transitionCondition: 'End the step once confirmation is repeated back by the customer.',
       attachedToolIds: ['end_call'],
+      quickReplies: [],
     },
   ];
 }
@@ -76,6 +80,7 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
         instruction: '',
         transitionCondition: '',
         attachedToolIds: [],
+        quickReplies: [],
       },
     ];
   });
@@ -93,6 +98,13 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
   });
 
   const [toolMenuStepId, setToolMenuStepId] = useState<string | null>(null);
+  const [quickRepliesExpanded, setQuickRepliesExpanded] = useState<Record<string, boolean>>(() => {
+    const m: Record<string, boolean> = {};
+    (config.instructionSteps ?? []).forEach((s) => {
+      if ((s.quickReplies ?? []).some((q) => q.trim())) m[s.id] = true;
+    });
+    return m;
+  });
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generatePrompt, setGeneratePrompt] = useState('');
   const generateRef = useRef<HTMLDivElement>(null);
@@ -137,7 +149,7 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
     const id = newStepId();
     setSteps((prev) => [
       ...prev,
-      { id, instruction: '', transitionCondition: '', attachedToolIds: [] },
+      { id, instruction: '', transitionCondition: '', attachedToolIds: [], quickReplies: [] },
     ]);
   }, []);
 
@@ -178,8 +190,15 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
     const mergedToolIds = [
       ...new Set([...globalToolIds, ...steps.flatMap((s) => s.attachedToolIds)]),
     ];
+    const normalizedSteps = steps.map((s) => ({
+      ...s,
+      quickReplies: (s.quickReplies ?? [])
+        .map((q) => q.trim())
+        .filter(Boolean)
+        .slice(0, 3),
+    }));
     onSave({
-      instructionSteps: steps,
+      instructionSteps: normalizedSteps,
       globalToolIds,
       builtInTools: mergedToolIds,
     });
@@ -386,6 +405,54 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
                         </div>
                       )}
                     </div>
+
+                    {config.type === 'chat' && (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuickRepliesExpanded((m) => ({
+                              ...m,
+                              [step.id]: !m[step.id],
+                            }))
+                          }
+                          className="text-xs font-medium text-cyan hover:underline"
+                        >
+                          {quickRepliesExpanded[step.id]
+                            ? 'Hide quick replies'
+                            : '+ Add quick replies'}
+                        </button>
+                        {quickRepliesExpanded[step.id] && (
+                          <div className="space-y-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+                            <label className="block text-xs font-medium text-text-secondary">
+                              Quick reply buttons shown at this step
+                            </label>
+                            {[0, 1, 2].map((slot) => {
+                              const padded = [...(step.quickReplies ?? [])]
+                                .concat(['', '', ''])
+                                .slice(0, 3);
+                              return (
+                                <input
+                                  key={slot}
+                                  type="text"
+                                  value={padded[slot]}
+                                  onChange={(e) => {
+                                    const next = [...padded];
+                                    next[slot] = e.target.value;
+                                    updateStep(step.id, { quickReplies: next });
+                                  }}
+                                  placeholder="e.g. Pay Now"
+                                  className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
+                                />
+                              );
+                            })}
+                            <p className="text-[11px] text-text-secondary">
+                              WhatsApp supports max 3 quick reply buttons
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Reorder.Item>

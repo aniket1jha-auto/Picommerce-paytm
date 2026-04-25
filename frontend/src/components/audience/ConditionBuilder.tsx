@@ -65,9 +65,11 @@ export function cloneFilterState(s: FilterState): FilterState {
 interface ConditionBuilderProps {
   state: FilterState;
   onChange: (next: FilterState) => void;
+  /** Hide title + helper when embedded in a wizard step */
+  hideIntro?: boolean;
 }
 
-export function ConditionBuilder({ state, onChange }: ConditionBuilderProps) {
+export function ConditionBuilder({ state, onChange, hideIntro }: ConditionBuilderProps) {
   const { items, betweenTopLevel } = state;
 
   function setBetweenTopLevel(next: ('AND' | 'OR')[]) {
@@ -96,6 +98,35 @@ export function ConditionBuilder({ state, onChange }: ConditionBuilderProps) {
     const vt = attr.valueType;
 
     if (line.operator === 'is empty') return null;
+
+    if (vt === 'text' && (line.operator === 'in list' || line.operator === 'not in list')) {
+      return (
+        <input
+          value={line.value}
+          onChange={(e) => onLineChange({ ...line, value: e.target.value })}
+          placeholder="Comma-separated values"
+          className="min-w-[8rem] flex-1 rounded-lg border border-[#E5E7EB] px-2 py-1.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
+        />
+      );
+    }
+
+    if (vt === 'list' && line.operator === 'equals') {
+      const opts = attr.listOptions ?? [];
+      return (
+        <select
+          value={line.value}
+          onChange={(e) => onLineChange({ ...line, value: e.target.value })}
+          className="w-full min-w-[8rem] rounded-lg border border-[#E5E7EB] bg-white px-2 py-1.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
+        >
+          <option value="">Select…</option>
+          {opts.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
     if (vt === 'list' && (line.operator === 'in list' || line.operator === 'not in list')) {
       const opts = attr.listOptions ?? [];
@@ -348,12 +379,14 @@ export function ConditionBuilder({ state, onChange }: ConditionBuilderProps) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-text-primary">Define conditions</label>
-        <p className="text-sm text-text-secondary">
-          Build filters with AND/OR logic. Add groups for nested rules.
-        </p>
-      </div>
+      {!hideIntro && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-text-primary">Define conditions</label>
+          <p className="text-sm text-text-secondary">
+            Build filters with AND/OR logic. Add groups for nested rules.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         {items.map((item, i) => (

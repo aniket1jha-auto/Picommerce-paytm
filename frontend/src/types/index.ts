@@ -115,6 +115,17 @@ export interface Segment {
   size: number;
   /** How the segment was created — shown as a badge on cards */
   segmentSource?: SegmentSource;
+  /** filter = rule builder; csv = file import */
+  creationSource?: 'filter' | 'csv';
+  /** When creationSource is csv */
+  csvImport?: {
+    fileName: string;
+    importedAt: string;
+  };
+  /** High-level segment goal from creation wizard */
+  segmentGoal?: string;
+  /** Campaign names this segment is used in (for Audiences cards) */
+  usedInCampaigns?: string[];
   filters?: string;
   reachability?: {
     sms: number;

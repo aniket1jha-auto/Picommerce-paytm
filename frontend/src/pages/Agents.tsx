@@ -44,7 +44,9 @@ function AgentCard({ agent }: { agent: Agent }) {
 
       <div className="grid grid-cols-4 gap-4 pt-4 border-t border-[#E5E7EB]">
         <div>
-          <div className="text-xs text-text-secondary mb-1">Total Calls</div>
+          <div className="text-xs text-text-secondary mb-1">
+            {config.type === 'chat' ? 'Sessions' : 'Total Calls'}
+          </div>
           <div className="text-lg font-semibold text-text-primary">
             {formatCount(metrics.totalCalls)}
           </div>
@@ -62,9 +64,11 @@ function AgentCard({ agent }: { agent: Agent }) {
           </div>
         </div>
         <div>
-          <div className="text-xs text-text-secondary mb-1">Voice</div>
+          <div className="text-xs text-text-secondary mb-1">
+            {config.type === 'chat' ? 'Channel' : 'Voice'}
+          </div>
           <div className="text-sm font-medium text-text-primary capitalize">
-            {config.voice}
+            {config.type === 'chat' ? (config.chatChannel ?? 'chat') : config.voice}
           </div>
         </div>
       </div>

@@ -62,12 +62,16 @@ export interface CustomFunction {
   };
 }
 
+export type ChatChannelId = 'whatsapp' | 'sms' | 'rcs' | 'webhook';
+
 /** Ordered plain-language steps for the Instructions wizard step */
 export interface InstructionStep {
   id: string;
   instruction: string;
   transitionCondition: string;
   attachedToolIds: string[];
+  /** Quick-reply button labels shown to the customer at this step (chat agents) */
+  quickReplies?: string[];
 }
 
 export interface AgentConfiguration {
@@ -142,6 +146,37 @@ export interface AgentConfiguration {
   // Step 6: Review & Deploy (renumbered from former step 7)
   webhookUrl?: string;
   environment: 'test' | 'production';
+
+  /** Chat agent wizard — channel & languages */
+  chatChannel?: ChatChannelId;
+  chatLanguages?: string[];
+  /** Optional display name for customer-facing intro */
+  chatDisplayName?: string;
+  /** Hard constraints — chat wizard */
+  mustAlwaysRules?: string[];
+  mustNeverRules?: string[];
+
+  /** Step 2 (chat): WhatsApp Business API */
+  chatWhatsAppAccountId?: string;
+  chatWhatsAppPhoneId?: string;
+  /** Single fallback when auto-detect not used */
+  chatFallbackLanguage?: string;
+
+  /** Step 5 (chat): session, fallback, opt-out, escalation */
+  chatAdvancedSettings?: ChatAgentAdvancedSettings;
+}
+
+export type ChatSessionExpiryAction = 'template' | 'silent' | 'human';
+export type ChatOptOutBehavior = 'confirm' | 'human';
+
+export interface ChatAgentAdvancedSettings {
+  sessionExpiryAction: ChatSessionExpiryAction;
+  fallbackMessage: string;
+  maxFallbackAttempts: number;
+  stopKeywords: string[];
+  optOutBehavior: ChatOptOutBehavior;
+  optOutConfirmationMessage: string;
+  escalationKeywords: string[];
 }
 
 export interface Agent {

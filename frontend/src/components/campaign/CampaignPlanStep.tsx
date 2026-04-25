@@ -985,7 +985,7 @@ export function CampaignPlanStep({ campaignData, onUpdate }: CampaignPlanStepPro
   const { segments } = usePhaseData();
   const selectedSegment = segments.find((s) => s.id === campaignData.segmentId);
   const segmentSize = selectedSegment?.size ?? 45000;
-  const budgetInput = campaignData.budget || campaignData.goal.tentativeBudget || '';
+  const budgetInput = campaignData.goal.tentativeBudget || '';
   const tentativeBudget = budgetInput ? parseFloat(budgetInput.replace(/[₹,]/g, '')) * (budgetInput.toLowerCase().includes('l') ? 100000 : budgetInput.toLowerCase().includes('k') ? 1000 : 1) : 0;
   const selectedChannels = campaignData.channels;
 

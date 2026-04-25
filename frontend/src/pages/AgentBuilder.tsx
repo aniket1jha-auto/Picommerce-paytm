@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -80,6 +80,26 @@ const DEFAULT_CONFIG: AgentConfiguration = {
     tcpaCompliance: true,
   },
   environment: 'test',
+
+  chatChannel: 'whatsapp',
+  chatLanguages: ['English'],
+  chatFallbackLanguage: 'English',
+  chatDisplayName: '',
+  chatWhatsAppAccountId: 'wa-1',
+  chatWhatsAppPhoneId: 'ph-1',
+  mustAlwaysRules: [],
+  mustNeverRules: [],
+  chatAdvancedSettings: {
+    sessionExpiryAction: 'template',
+    fallbackMessage:
+      "I'm sorry, I didn't quite understand that. Could you rephrase, or type HELP to see what I can assist with.",
+    maxFallbackAttempts: 2,
+    stopKeywords: ['STOP', 'UNSUBSCRIBE', 'OPT OUT'],
+    optOutBehavior: 'confirm',
+    optOutConfirmationMessage:
+      "You've been unsubscribed from our messages. Reply START to re-subscribe or call [number] for support.",
+    escalationKeywords: ['legal', 'RBI', 'fraud', 'complaint', 'manager'],
+  },
 };
 
 export function AgentBuilder() {
@@ -105,8 +125,20 @@ export function AgentBuilder() {
   };
 
   const handleSave = (stepConfig: Partial<AgentConfiguration>) => {
-    setConfig({ ...config, ...stepConfig });
+    setConfig((prev) => ({ ...prev, ...stepConfig }));
   };
+
+  const stepIndicatorLabels = useMemo(() => {
+    const agentType = config.type;
+    return [
+      'Basic Info',
+      agentType === 'chat' ? 'Channel & Identity' : 'Model & Voice',
+      'System Prompt',
+      'Instructions',
+      'Advanced Settings',
+      'Review & Deploy',
+    ];
+  }, [config.type]);
 
   const handleDeploy = () => {
     const agent = createAgent(config);
@@ -146,7 +178,7 @@ export function AgentBuilder() {
                     currentStep >= step.id ? 'text-text-primary' : 'text-text-secondary'
                   }`}
                 >
-                  {step.name}
+                  {stepIndicatorLabels[idx]}
                 </span>
               </div>
               {idx < STEPS.length - 1 && (

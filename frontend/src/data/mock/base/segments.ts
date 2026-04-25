@@ -22,6 +22,7 @@ export const baseSegments: Segment[] = [
       genderSplit: { male: 72, female: 28 },
     },
     lastUpdated: '2026-03-28T08:00:00Z',
+    usedInCampaigns: ['Recovery Nov', 'KYC Push'],
   },
   {
     id: 'seg-002',
@@ -44,6 +45,7 @@ export const baseSegments: Segment[] = [
       genderSplit: { male: 65, female: 35 },
     },
     lastUpdated: '2026-03-27T12:00:00Z',
+    usedInCampaigns: ['KYC Push'],
   },
   {
     id: 'seg-003',
@@ -66,6 +68,7 @@ export const baseSegments: Segment[] = [
       genderSplit: { male: 68, female: 32 },
     },
     lastUpdated: '2026-03-29T06:00:00Z',
+    usedInCampaigns: ['Recovery Nov', 'Festive SMS', 'Loyalty Wave'],
   },
   {
     id: 'seg-004',
