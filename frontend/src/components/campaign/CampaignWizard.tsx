@@ -45,15 +45,64 @@ export interface CampaignData {
   waterfallConfig: Record<string, unknown>;
   journey: CampaignJourneyState;
   content: Partial<Record<ChannelType, unknown>>;
+  senderConfig: Partial<
+    Record<
+      ChannelType,
+      {
+        sms?: { account: string; senderId: string };
+        whatsapp?: { waba: string; phoneNumber: string; messageType: 'template' | 'session' };
+        rcs?: { agent: string; sender: string; fallback: 'sms' | 'none' };
+        ai_voice?: {
+          account: string;
+          callerNumber: string;
+          voiceAgent: string;
+          retry: {
+            enabled: boolean;
+            maxRetries: number;
+            delayValue: number;
+            delayUnit: 'minutes' | 'hours';
+            retryOn: { noAnswer: boolean; busy: boolean; networkError: boolean };
+          };
+        };
+      }
+    >
+  >;
   schedule: {
-    type: 'one-time' | 'recurring';
+    type: 'one-time' | 'recurring' | 'event' | 'smart_ai';
     date: string;
     time: string;
     recurringFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
     recurringDay: string;
     recurringTime: string;
+    event: {
+      source: 'app' | 'web' | 'crm' | 'payments' | 'custom' | 'webhook';
+      triggerMethod: 'event' | 'webhook';
+      eventName: string;
+      match: 'every' | 'first' | 'nth';
+      nthOccurrence: number;
+      delayMinutes: number;
+      dedupeWindowValue: number;
+      dedupeWindowUnit: 'seconds' | 'minutes';
+      timezone: 'Asia/Kolkata' | 'UTC';
+      daysOfWeek: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+      windowStart: string; // HH:mm
+      windowEnd: string; // HH:mm
+      frequencyCap: 'once' | 'once_per_day' | 'cooldown';
+      cooldownHours: number;
+      maxEntriesPerUser: number | null;
+      allowReentry: boolean;
+      endDate: string; // optional ISO date
+      webhook: {
+        authMethod: 'bearer' | 'hmac_sha256';
+        bearerToken: string;
+        hmacSecret: string;
+      };
+    };
     startDate: string;
+    startTime: string;
     endDate: string;
+    endTime: string;
+    smartGoalFocus: 'start_ai' | 'all_round' | 'custom';
   };
   voiceConfig: Record<string, unknown>;
   highIntent: {
@@ -77,15 +126,39 @@ const INITIAL_DATA: CampaignData = {
   waterfallConfig: {},
   journey: buildPrebuiltJourney('blank'),
   content: {},
+  senderConfig: {},
   schedule: {
-    type: 'one-time',
+    type: 'smart_ai',
     date: '',
     time: '10:00',
     recurringFrequency: 'weekly',
     recurringDay: 'monday',
     recurringTime: '10:00',
+    event: {
+      source: 'app',
+      triggerMethod: 'event',
+      eventName: '',
+      match: 'every',
+      nthOccurrence: 2,
+      delayMinutes: 0,
+      dedupeWindowValue: 30,
+      dedupeWindowUnit: 'seconds',
+      timezone: 'Asia/Kolkata',
+      daysOfWeek: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      windowStart: '09:00',
+      windowEnd: '20:00',
+      frequencyCap: 'cooldown',
+      cooldownHours: 24,
+      maxEntriesPerUser: null,
+      allowReentry: true,
+      endDate: '',
+      webhook: { authMethod: 'bearer', bearerToken: '', hmacSecret: '' },
+    },
     startDate: '',
+    startTime: '10:00',
     endDate: '',
+    endTime: '19:00',
+    smartGoalFocus: 'start_ai',
   },
   voiceConfig: {},
   highIntent: {

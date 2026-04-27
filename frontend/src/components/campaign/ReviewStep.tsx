@@ -170,9 +170,17 @@ export function ReviewStep({ campaignData }: ReviewStepProps) {
     campaignData.campaignType === 'simple_send'
       ? campaignData.schedule.type === 'recurring'
         ? `Recurring ${campaignData.schedule.recurringFrequency} on ${campaignData.schedule.recurringDay}s at ${campaignData.schedule.recurringTime}`
-        : campaignData.schedule.date
-          ? `One-time on ${campaignData.schedule.date} at ${campaignData.schedule.time}`
-          : 'Not scheduled yet — set in the Content & Schedule step.'
+        : campaignData.schedule.type === 'event'
+          ? campaignData.schedule.event.eventName.trim()
+            ? `Event-based: ${campaignData.schedule.event.eventName}${campaignData.schedule.event.delayMinutes > 0 ? ` (delay ${campaignData.schedule.event.delayMinutes}m)` : ''}`
+            : 'Event-based trigger not set yet — set in the Content & Schedule step.'
+          : campaignData.schedule.type === 'smart_ai'
+            ? campaignData.schedule.startDate
+              ? `Smart + AI window: ${campaignData.schedule.startDate} ${campaignData.schedule.startTime} → ${campaignData.schedule.endDate || '—'} ${campaignData.schedule.endTime}`
+              : 'Smart + AI window not set yet — set in the Content & Schedule step.'
+            : campaignData.schedule.date
+              ? `One-time on ${campaignData.schedule.date} at ${campaignData.schedule.time}`
+              : 'Not scheduled yet — set in the Content & Schedule step.'
       : entryTriggerScheduleSummary(campaignData.journey);
 
   const typeBadge =
