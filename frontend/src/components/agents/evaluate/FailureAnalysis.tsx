@@ -50,7 +50,22 @@ function FailureCard({ pattern }: { pattern: FailurePattern }) {
 }
 
 export function FailureAnalysis({ agentId: _agentId }: Props) {
-  const patterns = mockFailurePatterns;
+  const patterns = mockFailurePatterns.filter((p) => {
+    const hay = [
+      p.type,
+      p.suggestedFix,
+      ...p.examples,
+    ]
+      .join(' ')
+      .toLowerCase();
+    return (
+      hay.includes('api') ||
+      hay.includes('tool') ||
+      hay.includes('webhook') ||
+      hay.includes('crm') ||
+      hay.includes('calendar')
+    );
+  });
   const totalFailures = patterns.reduce((sum, p) => sum + p.count, 0);
 
   return (
@@ -60,16 +75,24 @@ export function FailureAnalysis({ agentId: _agentId }: Props) {
           <TrendingDown size={24} className="text-red-600" />
           <div>
             <h3 className="text-base font-semibold text-text-primary mb-1">
-              Failure Pattern Analysis
+              Tool call analysis
             </h3>
             <p className="text-sm text-text-secondary mb-3">
-              Identified {patterns.length} common failure patterns across {totalFailures} failed calls.
-              Addressing these issues could improve success rate by 10-15%.
+              {patterns.length === 0 ? (
+                <>
+                  No tool-related failures detected yet. This section will populate once your agent starts using tools in production.
+                </>
+              ) : (
+                <>
+                  Identified {patterns.length} common tool-related failure patterns across {totalFailures} failed calls.
+                  Addressing these issues could improve success rate by 10-15%.
+                </>
+              )}
             </p>
             <div className="flex items-center gap-4 text-sm">
               <div>
                 <span className="font-semibold text-text-primary">{totalFailures}</span>
-                <span className="text-text-secondary ml-1">Total Failures</span>
+                <span className="text-text-secondary ml-1">Tool Failures</span>
               </div>
               <div>
                 <span className="font-semibold text-text-primary">{patterns.length}</span>
@@ -80,11 +103,13 @@ export function FailureAnalysis({ agentId: _agentId }: Props) {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {patterns.map((pattern, idx) => (
-          <FailureCard key={idx} pattern={pattern} />
-        ))}
-      </div>
+      {patterns.length > 0 && (
+        <div className="space-y-4">
+          {patterns.map((pattern, idx) => (
+            <FailureCard key={idx} pattern={pattern} />
+          ))}
+        </div>
+      )}
 
       <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
         <div className="flex items-start gap-2">
@@ -92,8 +117,8 @@ export function FailureAnalysis({ agentId: _agentId }: Props) {
           <div>
             <div className="text-sm font-medium text-blue-900 mb-1">Pro Tip</div>
             <p className="text-sm text-blue-800">
-              Start by addressing high-percentage failures first. Even small improvements to common issues
-              can have a significant impact on overall agent performance.
+              Start by addressing high-percentage tool failures first. Even small improvements to retries, timeouts,
+              and fallbacks can have a significant impact on overall agent performance.
             </p>
           </div>
         </div>

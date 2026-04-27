@@ -183,7 +183,7 @@ export function AgentDetail() {
           >
             <div className="flex items-center gap-2">
               <AlertTriangle size={16} />
-              Failure Analysis
+              Tool call analysis
             </div>
             {activeTab === 'failures' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan" />

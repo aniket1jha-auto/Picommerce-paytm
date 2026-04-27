@@ -203,13 +203,25 @@ export interface CallTranscript {
   timestamp: string;
   duration: number;
   status: CallStatus;
-  messages: {
-    role: 'user' | 'agent';
-    content: string;
-    timestamp: string;
-    sentiment?: SentimentType;
-    intent?: string;
-  }[];
+  /** Session-level intent classification (not per-message). */
+  intent?: string;
+  /** Session-level sentiment classification (not per-message). */
+  sentiment?: SentimentType;
+  messages: Array<
+    | {
+        role: 'user' | 'agent';
+        content: string;
+        timestamp: string;
+      }
+    | {
+        role: 'tool';
+        timestamp: string;
+        toolName: string;
+        status: 'success' | 'error';
+        input?: string;
+        output?: string;
+      }
+  >;
   metadata: {
     phoneNumber?: string;
     campaignId?: string;
