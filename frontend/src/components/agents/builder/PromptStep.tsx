@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Info, Sparkles } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
 import { PERSONALITY_TRAITS, TONE_OPTIONS, PROMPT_TEMPLATES } from '@/data/agentConstants';
 
@@ -44,7 +44,43 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
     onNext();
   };
 
-  const isValid = systemPrompt.trim() && role.trim() && objectives.length > 0;
+  const hasKeyIntent = objectives.some((o) => o.trim().length > 0);
+  const missingSystemPrompt = systemPrompt.trim().length === 0;
+  const missingRole = role.trim().length === 0;
+  const missingKeyIntents = !hasKeyIntent;
+
+  const isValid = !missingSystemPrompt && !missingRole && !missingKeyIntents;
+
+  function InfoHint({
+    text,
+    required = false,
+    missing = false,
+  }: {
+    text: string;
+    required?: boolean;
+    missing?: boolean;
+  }) {
+    const colorClass = missing ? 'text-red-600' : 'text-text-secondary';
+
+    return (
+      <span className="group relative inline-flex items-center">
+        <span
+          className={[
+            'inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold leading-none',
+            missing ? 'border-red-300 bg-red-50' : 'border-[#E5E7EB] bg-white',
+            colorClass,
+          ].join(' ')}
+          aria-label={required ? 'Required field info' : 'Field info'}
+        >
+          <Info size={12} />
+        </span>
+        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-72 -translate-x-1/2 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-xs leading-relaxed text-text-secondary shadow-lg group-hover:block">
+          <span className="font-semibold text-text-primary">{required ? 'Required. ' : ''}</span>
+          {text}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,8 +123,13 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
 
       <div className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            System Prompt *
+          <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+            <span>System Prompt</span>
+            <InfoHint
+              required
+              missing={missingSystemPrompt}
+              text="Define the agent’s overall behavior, constraints, and style. This is the top-level instruction the agent should always follow."
+            />
           </label>
           <textarea
             value={systemPrompt}
@@ -102,8 +143,13 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Role/Identity *
+            <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+              <span>Role/Identity</span>
+              <InfoHint
+                required
+                missing={missingRole}
+                text="Who the agent is. This helps the agent adopt the right voice and context (e.g., Sales Rep, Support Agent, Appointment Booker)."
+              />
             </label>
             <input
               type="text"
@@ -115,8 +161,9 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Tone *
+            <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+              <span>Tone</span>
+              <InfoHint text="The default communication tone the agent should use across responses." />
             </label>
             <select
               value={tone}
@@ -134,8 +181,9 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Personality Traits
+          <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+            <span>Personality Traits</span>
+            <InfoHint text="Optional traits that shape how the agent behaves (e.g., Friendly, Concise, Patient). You can select multiple." />
           </label>
           <div className="flex flex-wrap gap-2">
             {PERSONALITY_TRAITS.map((trait) => (
@@ -157,8 +205,13 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Key Objectives *
+          <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+            <span>Key Intents</span>
+            <InfoHint
+              required
+              missing={missingKeyIntents}
+              text="What the agent should try to accomplish in conversations. Add 1+ intents; these guide decision-making and prioritization."
+            />
           </label>
           <div className="space-y-2">
             {objectives.map((obj, idx) => (
@@ -189,15 +242,16 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
               className="text-sm text-cyan hover:underline"
               data-testid="add-objective-btn"
             >
-              + Add Objective
+              + Add Intent
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Do's (Best Practices)
+            <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+              <span>Do&apos;s (Best Practices)</span>
+              <InfoHint text="Optional guidelines describing what the agent should do while interacting with users." />
             </label>
             <div className="space-y-2">
               {dos.map((item, idx) => (
@@ -232,8 +286,9 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Don'ts (What to Avoid)
+            <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+              <span>Don&apos;ts (What to Avoid)</span>
+              <InfoHint text="Optional guidelines describing what the agent must avoid (tone, compliance, unsafe actions, etc.)." />
             </label>
             <div className="space-y-2">
               {donts.map((item, idx) => (

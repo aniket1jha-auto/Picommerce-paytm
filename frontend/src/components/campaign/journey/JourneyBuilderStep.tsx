@@ -19,7 +19,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import type { Connection, EdgeChange, NodeChange, Node } from '@xyflow/react';
-import { Maximize2, Minus, Plus, Map as MapIcon } from 'lucide-react';
+import { Maximize2, Minus, Plus, Map as MapIcon, Sparkles, PencilLine, ArrowRight } from 'lucide-react';
 import type { CampaignData } from '@/components/campaign/CampaignWizard';
 import type {
   CampaignJourneyState,
@@ -64,6 +64,10 @@ function isEntryNode(n: JourneyFlowNode) {
   return (ENTRY_TRIGGER_KINDS as readonly string[]).includes(String((n.data as { kind?: string }).kind));
 }
 
+function isBlankJourney(j: CampaignJourneyState) {
+  return j.edges.length === 0 && j.nodes.length === 1 && isEntryNode(j.nodes[0] as JourneyFlowNode);
+}
+
 function JourneyBuilderCanvas({
   campaignData,
   onUpdate,
@@ -77,6 +81,8 @@ function JourneyBuilderCanvas({
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [validationOpen, setValidationOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [starterOpen, setStarterOpen] = useState(() => isBlankJourney(campaignData.journey));
+  const [pendingFitView, setPendingFitView] = useState(false);
 
   const historyRef = useRef<CampaignJourneyState[]>([]);
   const isUndoing = useRef(false);
@@ -206,10 +212,32 @@ function JourneyBuilderCanvas({
       const built = buildPrebuiltJourney(templateId);
       setJourney({ nodes: built.nodes, edges: built.edges });
       setTemplateOpen(false);
-      requestAnimationFrame(() => fitView({ padding: 0.2, duration: 300 }));
+      setStarterOpen(false);
+      setPendingFitView(true);
     },
-    [fitView, recordHistory, setJourney],
+    [recordHistory, setJourney],
   );
+
+  const startFromScratch = useCallback(() => {
+    applyTemplate('blank');
+  }, [applyTemplate]);
+
+  useEffect(() => {
+    // If user already has a non-blank flow (e.g. returning to this step), don't show the starter screen.
+    if (!isBlankJourney(journey)) setStarterOpen(false);
+  }, [journey]);
+
+  useEffect(() => {
+    if (!pendingFitView || starterOpen) return;
+    // Wait a tick to ensure ReactFlow has mounted and nodes are in the store.
+    requestAnimationFrame(() => {
+      try {
+        fitView({ padding: 0.2, duration: 300 });
+      } finally {
+        setPendingFitView(false);
+      }
+    });
+  }, [fitView, pendingFitView, starterOpen]);
 
   const focusNode = useCallback(
     (nodeId: string) => {
@@ -349,7 +377,7 @@ function JourneyBuilderCanvas({
   const passedCount = validation.checks.filter((c) => c.ok).length;
 
   return (
-    <div className="flex h-[min(72vh,720px)] min-h-[520px] flex-col border-t border-[#E5E7EB]">
+    <div className="relative flex h-[min(72vh,720px)] min-h-[520px] flex-col border-t border-[#E5E7EB]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E5E7EB] bg-[#FAFAFA] px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-text-primary">Journey Builder</span>
@@ -494,6 +522,8 @@ function JourneyBuilderCanvas({
               />
             )}
           </ReactFlow>
+
+          {/* starter screen is rendered as full-page state above */}
         </div>
         <JourneyNodeConfigPanel
           node={selectedNode}
@@ -508,6 +538,73 @@ function JourneyBuilderCanvas({
         onClose={() => setTemplateOpen(false)}
         onSelect={applyTemplate}
       />
+
+      {starterOpen && !templateOpen && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[#F4F4F5] p-6">
+          <div className="w-full max-w-3xl rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl ring-1 ring-black/[0.04]">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Get started</p>
+              <h3 className="text-lg font-semibold text-text-primary">Choose how you want to build this journey</h3>
+              <p className="text-sm text-text-secondary">
+                Start with a proven template or build a custom flow from scratch.
+              </p>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setTemplateOpen(true)}
+                className="group flex h-full flex-col rounded-xl border border-cyan/30 bg-gradient-to-br from-cyan/5 to-cyan/10 p-5 text-left transition-all hover:shadow-md hover:ring-2 hover:ring-cyan/30"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-cyan text-white shadow-sm">
+                      <Sparkles size={18} />
+                    </span>
+                    <span className="text-sm font-semibold text-text-primary">Start with a pre-built journey</span>
+                  </div>
+                  <ArrowRight size={16} className="text-cyan transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-text-secondary">
+                  Pick from proven flows like Recovery, KYC re-engagement, Welcome onboarding, and more.
+                </p>
+                <p className="mt-3 text-xs font-semibold text-cyan">Browse templates</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={startFromScratch}
+                className="group flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 text-left transition-all hover:border-[#D1D5DB] hover:shadow-md"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#111827] text-white shadow-sm">
+                      <PencilLine size={18} />
+                    </span>
+                    <span className="text-sm font-semibold text-text-primary">Start from scratch</span>
+                  </div>
+                  <ArrowRight size={16} className="text-text-secondary transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-text-secondary">
+                  Open the playground with only the entry node. Add steps by dragging nodes from the left palette.
+                </p>
+                <p className="mt-3 text-xs font-semibold text-text-primary">Open playground</p>
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-[#FAFAFA] px-4 py-3">
+              <p className="text-xs text-text-secondary">You can always start from a template later.</p>
+              <button
+                type="button"
+                onClick={() => setStarterOpen(false)}
+                className="text-xs font-semibold text-text-secondary hover:text-text-primary"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {ctxMenu && (
         <div

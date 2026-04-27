@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Sparkles,
@@ -20,6 +20,9 @@ import {
 import type { ChannelType } from '@/types';
 import type { VoiceConfig } from './VoiceCallConfig';
 import { VoiceCallConfig } from './VoiceCallConfig';
+import type { TemplateChannel, ContentTemplateRow } from '@/types/contentLibrary';
+import { loadContentTemplates } from '@/utils/contentTemplatesStore';
+import { Link as RouterLink } from 'react-router-dom';
 
 // ─── Content types ────────────────────────────────────────────────────────────
 
@@ -364,6 +367,86 @@ function InputLabel({ children }: { children: ReactNode }) {
   );
 }
 
+function TemplatePicker({
+  channel,
+  onApplyBody,
+  allowedStatuses,
+}: {
+  channel: TemplateChannel;
+  onApplyBody: (body: string) => void;
+  allowedStatuses?: Array<ContentTemplateRow['status']>;
+}) {
+  const [templates, setTemplates] = useState<ContentTemplateRow[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+
+  useEffect(() => {
+    setTemplates(loadContentTemplates());
+  }, []);
+
+  const filtered = templates.filter((t) => {
+    if (t.channel !== channel) return false;
+    if (!allowedStatuses || allowedStatuses.length === 0) return true;
+    return allowedStatuses.includes(t.status);
+  });
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-[220px] flex-1 items-center gap-2">
+        <select
+          value={selectedId}
+          onChange={(e) => {
+            const next = e.target.value;
+            setSelectedId(next);
+            const tpl = filtered.find((t) => t.id === next);
+            if (tpl) {
+              onApplyBody(tpl.bodyPreview);
+              setSelectedId('');
+            }
+          }}
+          className="w-full max-w-[360px] rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+        >
+          <option value="">Select from Content Library…</option>
+          {filtered.length === 0 && <option value="" disabled>No templates available</option>}
+          {filtered.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.status})
+            </option>
+          ))}
+        </select>
+        <RouterLink to="/content-library" className="text-xs font-semibold text-cyan hover:underline">
+          Open library →
+        </RouterLink>
+      </div>
+      <p className="text-[11px] text-text-secondary">Applying a template fills the message text.</p>
+    </div>
+  );
+}
+
+function TemplateOnlyVariantPanel({
+  channel,
+  content,
+  onApplyBody,
+}: {
+  channel: TemplateChannel;
+  content: AnyChannelContent;
+  onApplyBody: (body: string) => void;
+}) {
+  const body = 'body' in content && typeof (content as { body?: unknown }).body === 'string' ? String((content as { body?: string }).body ?? '') : '';
+  const hasBody = body.trim().length > 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <TemplatePicker channel={channel} allowedStatuses={['approved']} onApplyBody={onApplyBody} />
+      <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">Selected template</p>
+        <p className={['mt-1 text-sm leading-relaxed', hasBody ? 'text-text-primary' : 'text-text-secondary italic'].join(' ')}>
+          {hasBody ? body : 'No template selected yet'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function getContentPreview(content: AnyChannelContent): string {
   if ('body' in content && typeof content.body === 'string' && content.body) {
     const text = content.body.slice(0, 80);
@@ -396,26 +479,33 @@ function SMSPanel({
   content,
   onContentChange,
   onSuggestCopy,
+  templateOnly = false,
 }: {
   content: SMSContent;
   onContentChange: (c: SMSContent) => void;
   onSuggestCopy: () => void;
+  templateOnly?: boolean;
 }) {
   const charCount = content.body.length;
   const isOverLimit = charCount > 160;
 
   return (
     <div className="flex flex-col gap-3">
+      <TemplatePicker channel="sms" onApplyBody={(body) => onContentChange({ body })} />
       <div className="flex items-center justify-between">
         <InputLabel>Message Text</InputLabel>
-        <SuggestButton onClick={onSuggestCopy} />
+        {!templateOnly && <SuggestButton onClick={onSuggestCopy} />}
       </div>
       <textarea
         value={content.body}
         onChange={(e) => onContentChange({ body: e.target.value })}
         rows={4}
-        placeholder="Type your SMS message here..."
-        className="w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none transition-colors focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+        placeholder="Select a template to populate message text…"
+        readOnly={templateOnly}
+        className={[
+          'w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none transition-colors focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+          templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+        ].join(' ')}
       />
       <div className="flex items-center justify-between">
         <span className={`text-xs ${isOverLimit ? 'font-medium text-error' : 'text-text-secondary'}`}>
@@ -442,25 +532,32 @@ function WhatsAppPanel({
   content,
   onContentChange,
   onSuggestCopy,
+  templateOnly = false,
 }: {
   content: WhatsAppContent;
   onContentChange: (c: WhatsAppContent) => void;
   onSuggestCopy: () => void;
+  templateOnly?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-5">
       <div className="flex flex-col gap-4">
+        <TemplatePicker channel="whatsapp" onApplyBody={(body) => onContentChange({ ...content, body })} />
         <div>
           <div className="flex items-center justify-between mb-1">
             <InputLabel>Message Text</InputLabel>
-            <SuggestButton onClick={onSuggestCopy} />
+            {!templateOnly && <SuggestButton onClick={onSuggestCopy} />}
           </div>
           <textarea
             value={content.body}
             onChange={(e) => onContentChange({ ...content, body: e.target.value })}
             rows={4}
-            placeholder="Enter your WhatsApp message..."
-            className="w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+            placeholder="Select a template to populate message text…"
+            readOnly={templateOnly}
+            className={[
+              'w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+              templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+            ].join(' ')}
           />
         </div>
         <div>
@@ -475,7 +572,11 @@ function WhatsAppPanel({
             value={content.imageUrl}
             onChange={(e) => onContentChange({ ...content, imageUrl: e.target.value })}
             placeholder="https://example.com/banner.jpg"
-            className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+            disabled={templateOnly}
+            className={[
+              'w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+              templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+            ].join(' ')}
           />
         </div>
         <div>
@@ -490,7 +591,11 @@ function WhatsAppPanel({
             value={content.ctaText}
             onChange={(e) => onContentChange({ ...content, ctaText: e.target.value })}
             placeholder="e.g., View My Offer"
-            className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+            disabled={templateOnly}
+            className={[
+              'w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+              templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+            ].join(' ')}
           />
         </div>
       </div>
@@ -537,25 +642,32 @@ function RCSPanel({
   content,
   onContentChange,
   onSuggestCopy,
+  templateOnly = false,
 }: {
   content: RCSContent;
   onContentChange: (c: RCSContent) => void;
   onSuggestCopy: () => void;
+  templateOnly?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-5">
       <div className="flex flex-col gap-4">
+        <TemplatePicker channel="rcs" onApplyBody={(body) => onContentChange({ ...content, body })} />
         <div>
           <div className="flex items-center justify-between mb-1">
             <InputLabel>Message Text</InputLabel>
-            <SuggestButton onClick={onSuggestCopy} />
+            {!templateOnly && <SuggestButton onClick={onSuggestCopy} />}
           </div>
           <textarea
             value={content.body}
             onChange={(e) => onContentChange({ ...content, body: e.target.value })}
             rows={4}
-            placeholder="Enter your RCS message..."
-            className="w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+            placeholder="Select a template to populate message text…"
+            readOnly={templateOnly}
+            className={[
+              'w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+              templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+            ].join(' ')}
           />
         </div>
         <div>
@@ -570,7 +682,11 @@ function RCSPanel({
             value={content.imageUrl}
             onChange={(e) => onContentChange({ ...content, imageUrl: e.target.value })}
             placeholder="https://example.com/card-image.jpg"
-            className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+            disabled={templateOnly}
+            className={[
+              'w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+              templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+            ].join(' ')}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -581,7 +697,11 @@ function RCSPanel({
               value={content.button1}
               onChange={(e) => onContentChange({ ...content, button1: e.target.value })}
               placeholder="Primary CTA"
-              className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+              disabled={templateOnly}
+              className={[
+                'w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+                templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+              ].join(' ')}
             />
           </div>
           <div>
@@ -591,7 +711,11 @@ function RCSPanel({
               value={content.button2}
               onChange={(e) => onContentChange({ ...content, button2: e.target.value })}
               placeholder="Secondary CTA"
-              className="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20"
+              disabled={templateOnly}
+              className={[
+                'w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-text-primary placeholder-text-secondary outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20',
+                templateOnly ? 'cursor-not-allowed bg-[#F9FAFB] text-text-secondary' : '',
+              ].join(' ')}
             />
           </div>
         </div>
@@ -998,14 +1122,54 @@ function renderChannelEditor(
   onChange: (c: AnyChannelContent) => void,
   onSuggestCopy: () => void,
   currentVoiceConfig: VoiceConfig,
+  mode: 'full' | 'template_only' = 'full',
 ): ReactNode {
   switch (channel) {
     case 'sms':
-      return <SMSPanel content={content as SMSContent} onContentChange={(c) => onChange(c)} onSuggestCopy={onSuggestCopy} />;
+      if (mode === 'template_only') {
+        return <TemplateOnlyVariantPanel channel="sms" content={content} onApplyBody={(body) => onChange({ body } satisfies SMSContent)} />;
+      }
+      return (
+        <SMSPanel
+          content={content as SMSContent}
+          onContentChange={(c) => onChange(c)}
+          onSuggestCopy={onSuggestCopy}
+        />
+      );
     case 'whatsapp':
-      return <WhatsAppPanel content={content as WhatsAppContent} onContentChange={(c) => onChange(c)} onSuggestCopy={onSuggestCopy} />;
+      if (mode === 'template_only') {
+        return (
+          <TemplateOnlyVariantPanel
+            channel="whatsapp"
+            content={content}
+            onApplyBody={(body) => onChange({ ...(content as WhatsAppContent), body })}
+          />
+        );
+      }
+      return (
+        <WhatsAppPanel
+          content={content as WhatsAppContent}
+          onContentChange={(c) => onChange(c)}
+          onSuggestCopy={onSuggestCopy}
+        />
+      );
     case 'rcs':
-      return <RCSPanel content={content as RCSContent} onContentChange={(c) => onChange(c)} onSuggestCopy={onSuggestCopy} />;
+      if (mode === 'template_only') {
+        return (
+          <TemplateOnlyVariantPanel
+            channel="rcs"
+            content={content}
+            onApplyBody={(body) => onChange({ ...(content as RCSContent), body })}
+          />
+        );
+      }
+      return (
+        <RCSPanel
+          content={content as RCSContent}
+          onContentChange={(c) => onChange(c)}
+          onSuggestCopy={onSuggestCopy}
+        />
+      );
     case 'ai_voice':
       return (
         <div className="flex flex-col gap-3">
@@ -1039,6 +1203,7 @@ interface VariantManagerProps {
   onPrimaryContentChange: (content: AnyChannelContent) => void;
   onSuggestCopy: (variantId: string) => void;
   currentVoiceConfig: VoiceConfig;
+  mode?: 'full' | 'template_only';
 }
 
 function VariantManager({
@@ -1051,12 +1216,13 @@ function VariantManager({
   onPrimaryContentChange,
   onSuggestCopy,
   currentVoiceConfig,
+  mode = 'full',
 }: VariantManagerProps) {
   const [expandedVariantId, setExpandedVariantId] = useState<string | null>(variants[0]?.id ?? null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const canAddVariant = variants.length < 5;
-  const hasAiVariants = AI_VARIANTS[channel] !== undefined;
+  const hasAiVariants = mode === 'full' && AI_VARIANTS[channel] !== undefined;
 
   function addVariant() {
     const nextIndex = variants.length;
@@ -1180,6 +1346,7 @@ function VariantManager({
                     (c) => updateVariantContent(variant.id, c),
                     () => onSuggestCopy(variant.id),
                     currentVoiceConfig,
+                    mode,
                   )}
                 </div>
               )}
@@ -1307,6 +1474,7 @@ interface ChannelContentEditorProps {
   onVariantsChange: (variants: ContentVariant[]) => void;
   onTestingChange: (testing: TestingConfig) => void;
   onPrimaryContentChange: (content: AnyChannelContent) => void;
+  mode?: 'full' | 'template_only';
 }
 
 export function ChannelContentEditor({
@@ -1317,6 +1485,7 @@ export function ChannelContentEditor({
   onVariantsChange,
   onTestingChange,
   onPrimaryContentChange,
+  mode = 'full',
 }: ChannelContentEditorProps) {
   function getCurrentVoiceConfig(): VoiceConfig {
     const primary = variants.find((v) => v.isPrimary);
@@ -1325,6 +1494,7 @@ export function ChannelContentEditor({
   }
 
   function handleSuggestCopy(variantId: string) {
+    if (mode !== 'full') return;
     const sample = SAMPLE_COPY[channel];
     if (!sample) return;
     const updated = variants.map((v) => v.id === variantId ? { ...v, content: sample } : v);
@@ -1344,6 +1514,7 @@ export function ChannelContentEditor({
       onPrimaryContentChange={onPrimaryContentChange}
       onSuggestCopy={handleSuggestCopy}
       currentVoiceConfig={getCurrentVoiceConfig()}
+      mode={mode}
     />
   );
 }

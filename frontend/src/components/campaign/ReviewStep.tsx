@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Rocket } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { CampaignData } from './CampaignWizard';
 import { usePhaseData } from '@/hooks/usePhaseData';
@@ -167,10 +166,6 @@ export function ReviewStep({ campaignData }: ReviewStepProps) {
     return '—';
   }
 
-  function handleLaunch() {
-    setShowToast(true);
-  }
-
   const scheduleSummary =
     campaignData.campaignType === 'simple_send'
       ? campaignData.schedule.type === 'recurring'
@@ -300,17 +295,6 @@ export function ReviewStep({ campaignData }: ReviewStepProps) {
       <div className="rounded-lg border border-[#E5E7EB] bg-white p-5">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Schedule</h3>
         <p className="text-sm text-text-primary">{scheduleSummary}</p>
-      </div>
-
-      <div className="pt-2">
-        <button
-          type="button"
-          onClick={handleLaunch}
-          className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-cyan py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-cyan/90 active:scale-[0.99]"
-        >
-          <Rocket size={16} />
-          Launch Campaign
-        </button>
       </div>
 
       <Toast

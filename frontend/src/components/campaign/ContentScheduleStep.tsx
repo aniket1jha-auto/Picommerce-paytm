@@ -338,6 +338,7 @@ function ChannelRow({
             onVariantsChange={onVariantsChange}
             onTestingChange={onTestingChange}
             onPrimaryContentChange={onPrimaryContentChange}
+            mode="template_only"
           />
         </div>
       )}
@@ -737,7 +738,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                     isExpanded={expandedChannel === ch.id}
                     onToggle={() => toggleChannel(ch.id)}
                     onExpandToggle={() => handleExpandToggle(ch.id)}
-                    audienceSize={segmentSize || 45000}
+                    audienceSize={segmentSize > 0 ? segmentSize : 45000}
                     variants={getVariants(ch.id)}
                     testing={getTesting(ch.id)}
                     onVariantsChange={(v) => handleVariantsChange(ch.id, v)}

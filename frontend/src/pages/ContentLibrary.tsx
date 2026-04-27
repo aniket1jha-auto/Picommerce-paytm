@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { TemplatesTab } from '@/components/content-library/TemplatesTab';
 import { MediaLibraryTab } from '@/components/content-library/MediaLibraryTab';
-import { MOCK_CONTENT_TEMPLATES } from '@/data/mock/contentLibraryTemplates';
 import type { ContentTemplateRow } from '@/types/contentLibrary';
+import { loadContentTemplates, saveContentTemplates } from '@/utils/contentTemplatesStore';
 
 type TabId = 'templates' | 'media';
 
@@ -12,7 +12,7 @@ export function ContentLibrary() {
   const location = useLocation();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>('templates');
-  const [templates, setTemplates] = useState<ContentTemplateRow[]>(MOCK_CONTENT_TEMPLATES);
+  const [templates, setTemplates] = useState<ContentTemplateRow[]>(() => loadContentTemplates());
 
   useEffect(() => {
     const st = location.state as { newTemplate?: ContentTemplateRow } | null;
@@ -23,6 +23,10 @@ export function ContentLibrary() {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    saveContentTemplates(templates);
+  }, [templates]);
 
   return (
     <div className="flex flex-col gap-6">
