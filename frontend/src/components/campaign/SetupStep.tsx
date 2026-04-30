@@ -1,7 +1,13 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
-import type { CampaignData, CampaignGoal, CampaignType } from './CampaignWizard';
+import { useState } from 'react';
+import { Plus, Trash2, LayoutTemplate } from 'lucide-react';
+import type { CampaignData, CampaignGoal } from './CampaignWizard';
+import { CampaignTemplatePickerModal } from './CampaignTemplatePickerModal';
+import {
+  templateToInitialData,
+  type CampaignTemplateDef,
+} from '@/data/mock/campaignTemplates';
 
 interface SetupStepProps {
   campaignData: CampaignData;
@@ -109,26 +115,28 @@ function GoalCard({
   );
 }
 
-const CAMPAIGN_TYPE_OPTIONS: {
-  id: CampaignType;
-  title: string;
-  description: string;
-}[] = [
-  {
-    id: 'simple_send',
-    title: 'Simple Send',
-    description: 'Send a one-time or recurring message to your audience across one or more channels.',
-  },
-  {
-    id: 'journey',
-    title: 'Automated Journey',
-    description:
-      'Build a multi-step flow with logic, waits, and AI agents that responds to user behavior.',
-  },
-];
-
 export function SetupStep({ campaignData, onUpdate }: SetupStepProps) {
   const goalData = campaignData.goal;
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+
+  // Templates are only meaningful for the Quick-run path here. Journey
+  // templates live inside the canvas via PrebuiltJourneyModal.
+  const isQuickRun = campaignData.campaignType === 'simple_send';
+
+  function applyTemplate(t: CampaignTemplateDef) {
+    const seed = templateToInitialData(t);
+    onUpdate({
+      name: seed.name,
+      segmentId: seed.segmentId,
+      channels: seed.channels,
+      goal: { ...goalData, ...seed.goal },
+      ...(seed.senderConfig ? { senderConfig: seed.senderConfig } : {}),
+      ...(seed.schedule
+        ? { schedule: { ...campaignData.schedule, ...seed.schedule } }
+        : {}),
+    });
+    setTemplateModalOpen(false);
+  }
 
   function updateGoals(goals: CampaignGoal[]) {
     onUpdate({ goal: { ...goalData, goals } });
@@ -173,11 +181,23 @@ export function SetupStep({ campaignData, onUpdate }: SetupStepProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-base font-semibold text-text-primary">Campaign setup</h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Name your campaign, choose how it runs, define what you want to achieve, and set conversion goals.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-text-primary">Campaign setup</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Name your campaign, define what you want to achieve, and set conversion goals.
+          </p>
+        </div>
+        {isQuickRun && (
+          <button
+            type="button"
+            onClick={() => setTemplateModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-surface-raised px-3 h-8 text-[12px] font-medium text-text-primary transition-colors hover:border-accent hover:text-accent shrink-0"
+          >
+            <LayoutTemplate size={12} />
+            Start from template
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -206,33 +226,6 @@ export function SetupStep({ campaignData, onUpdate }: SetupStepProps) {
           placeholder="Describe what you want to achieve with this campaign. e.g., 'Re-engage 45K dormant high-LTV users who haven't transacted in 60+ days.'"
           className="w-full resize-none rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-text-primary placeholder:text-text-secondary focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan"
         />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-text-primary">Campaign Type</span>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {CAMPAIGN_TYPE_OPTIONS.map((opt) => {
-            const selected = campaignData.campaignType === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => onUpdate({ campaignType: opt.id })}
-                className={[
-                  'flex flex-col rounded-xl border-2 p-4 text-left transition-all',
-                  selected
-                    ? 'border-cyan bg-cyan/[0.06] shadow-sm ring-1 ring-cyan/20'
-                    : 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]',
-                ].join(' ')}
-              >
-                <span className={['text-sm font-semibold', selected ? 'text-cyan' : 'text-text-primary'].join(' ')}>
-                  {opt.title}
-                </span>
-                <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{opt.description}</p>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -301,6 +294,13 @@ export function SetupStep({ campaignData, onUpdate }: SetupStepProps) {
           Add Another Goal
         </button>
       </div>
+
+      <CampaignTemplatePickerModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        kind="quick_run"
+        onPick={applyTemplate}
+      />
     </div>
   );
 }

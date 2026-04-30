@@ -77,7 +77,7 @@ export function JourneyNodeConfigPanel({ node, onClose, onPatch, audienceSize = 
 
   if (!node) {
     return (
-      <aside className="h-full w-0 shrink-0 overflow-hidden border-l border-transparent bg-white transition-[width] duration-300" />
+      <aside className="h-full w-0 shrink-0 overflow-hidden border-l border-transparent bg-surface transition-[width] duration-300" />
     );
   }
 
@@ -85,20 +85,20 @@ export function JourneyNodeConfigPanel({ node, onClose, onPatch, audienceSize = 
   const patch = (p: Partial<JourneyNodeData>) => onPatch(node.id, mergeJourneyNodeData(d, p));
 
   return (
-    <aside className="flex h-full w-[320px] shrink-0 flex-col border-l border-[#E5E7EB] bg-white shadow-sm transition-[width] duration-300">
-      <div className="flex items-start justify-between gap-2 border-b border-[#E5E7EB] px-3 py-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="text-xl leading-none">{d.icon}</span>
+    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border-subtle bg-surface shadow-[var(--shadow-lg)] transition-[width] duration-300">
+      <div className="flex items-start justify-between gap-2 border-b border-border-subtle bg-surface px-4 py-3">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="text-[18px] leading-none">{d.icon}</span>
           <div className="min-w-0">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">{d.typeLabel}</p>
-            <p className="truncate text-sm font-semibold text-text-primary">{d.label}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">{d.typeLabel}</p>
+            <p className="truncate text-[13px] font-semibold text-text-primary">{d.label}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md p-1 text-text-secondary hover:bg-[#F3F4F6]"
           aria-label="Close panel"
+          className="rounded-md p-1 text-text-tertiary hover:bg-surface-raised hover:text-text-primary"
         >
           <X size={18} />
         </button>

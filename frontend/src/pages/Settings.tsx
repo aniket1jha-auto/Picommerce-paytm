@@ -1096,7 +1096,7 @@ function DataSourcesSection({
               {ds.status === 'disconnected' ? (
                 <button
                   onClick={() =>
-                    onToast(`Connecting ${ds.name} — integration coming soon`)
+                    onToast(`Connect ${ds.name} via Configure → Integrations`)
                   }
                   className="shrink-0 flex items-center gap-1.5 rounded-md border border-cyan px-3 py-1.5 text-xs font-medium text-cyan transition-colors hover:bg-cyan hover:text-white"
                 >
@@ -1152,7 +1152,7 @@ function BillingSection({ onToast }: { onToast: (msg: string) => void }) {
           </p>
         </div>
         <button
-          onClick={() => onToast('Upgrade flow coming soon')}
+          onClick={() => onToast('Upgrades are handled by your account manager — billing self-serve lands in Phase 5')}
           className="rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
         >
           Upgrade Plan
@@ -1236,7 +1236,7 @@ function TeamSection({ onToast }: { onToast: (msg: string) => void }) {
           </p>
         </div>
         <button
-          onClick={() => onToast('Team invite coming soon')}
+          onClick={() => onToast('Team management lands in Phase 5 — see Configure → Team & Roles')}
           className="flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
         >
           <UserPlus size={15} />

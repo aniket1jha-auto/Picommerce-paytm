@@ -5,6 +5,7 @@ import { baseInsights } from './base/insights';
 import { baseAnalytics } from './base/analytics';
 import { baseDataSources } from './base/dataSources';
 import { formatINR, formatCount, formatPercent } from '@/utils/format';
+import './__invariants'; // Phase 1.9 — auto-runs cross-entity invariant checks at boot.
 
 export interface PhaseData {
   campaigns: Campaign[];

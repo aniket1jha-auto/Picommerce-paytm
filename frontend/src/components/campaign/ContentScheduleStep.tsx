@@ -10,6 +10,8 @@ import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { usePhaseData } from '@/hooks/usePhaseData';
 import { channels, PLATFORM_REACHABILITY_RATES } from '@/data/channels';
 import { generateSmartSubSegments } from '@/utils/smartCampaignPlan';
+import { formatINR, formatChannelCost } from '@/utils/format';
+import { VoiceAgentPicker } from './VoiceAgentPicker';
 import { Modal } from '@/components/common/Modal';
 import {
   ChannelContentEditor,
@@ -292,13 +294,6 @@ const VOICE_NUMBERS: Record<(typeof VOICE_ACCOUNTS)[number], Array<{ number: str
   'Paytm Voice — Exotel Backup': [{ number: '+91 1800-XXX-XXX', label: 'Support Line', type: 'Toll-free' }],
   'CINFRA Internal': [{ number: '+91 81XXX XXXXX', label: 'Internal DID', type: 'Outbound' }],
 };
-const VOICE_AGENTS = [
-  { name: 'Megha', langs: 'Hindi, English' },
-  { name: 'Neha', langs: 'Kannada, Tamil, Telugu' },
-  { name: 'Noor', langs: 'Arabic' },
-  { name: 'Ava', langs: 'English (UAE)' },
-] as const;
-
 // ─── Historical conversion rates (Day 30+) ───────────────────────────────────
 
 const HISTORICAL_CONVERSION: Partial<Record<ChannelType, number>> = {
@@ -316,17 +311,8 @@ const CONVERSION_LABEL: Partial<Record<ChannelType, string>> = {
 };
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
-
-function formatINR(amount: number): string {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount.toFixed(0)}`;
-}
-
-function getChannelCostLabel(channelId: ChannelType, unitCost: number): string {
-  if (channelId === 'ai_voice') return `₹${unitCost.toFixed(2)}/call`;
-  return `₹${unitCost.toFixed(2)}/msg`;
-}
+// Currency + per-channel cost formatters live in @/utils/format and are
+// imported above. Three local copies were consolidated in Phase 1.7.
 
 // ─── AI recommendation logic ──────────────────────────────────────────────────
 
@@ -488,7 +474,7 @@ function ChannelRow({
   onPrimaryContentChange,
 }: ChannelRowProps) {
   const [insightOpen, setInsightOpen] = useState(false);
-  const costLabel = getChannelCostLabel(channelDef.id, channelDef.unitCost);
+  const costLabel = formatChannelCost(channelDef.id, channelDef.unitCost);
   const senderRef = useRef<HTMLDivElement | null>(null);
   const [senderPulse, setSenderPulse] = useState(false);
 
@@ -882,14 +868,11 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
         <p className="mt-0.5 text-xs text-text-secondary">
           Choose delivery mode first. Smart mode generates a cohort + channel + timing plan you can refine in the journey canvas.
         </p>
-        <div className="mt-3 grid gap-3 md:grid-cols-4">
+        {/* Phase 4 D.1.5 — quick run offers one-time / recurring / smart_ai only.
+            Event-triggered sends belong in the journey canvas, not in a single-send wizard. */}
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
           <ScheduleModeCard id="one-time" title="One time" description="Send to this segment once at a specific time." />
           <ScheduleModeCard id="recurring" title="Recurring" description="Repeat send on a schedule (daily, weekly, monthly)." />
-          <ScheduleModeCard
-            id="event"
-            title="Event-based"
-            description="Trigger when a user event happens (with delay, caps, and quiet hours)."
-          />
           <ScheduleModeCard id="smart_ai" title="Smart + AI" description="Set a window. Our intelligence engine designs the sub-cohort + channel + timing plan with fallbacks." />
         </div>
       </div>
@@ -2221,7 +2204,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                       // ai_voice
                       const account = ((sc as any)?.ai_voice?.account as string | undefined) ?? '';
                       const callerNumber = ((sc as any)?.ai_voice?.callerNumber as string | undefined) ?? '';
-                      const voiceAgent = ((sc as any)?.ai_voice?.voiceAgent as string | undefined) ?? '';
+                      const agentId = ((sc as any)?.ai_voice?.agentId as string | undefined) ?? '';
                       const retry = ((sc as any)?.ai_voice?.retry as any) ?? {
                         enabled: false,
                         maxRetries: 2,
@@ -2232,7 +2215,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
 
                       const numbers = account && (VOICE_NUMBERS as any)[account] ? (VOICE_NUMBERS as any)[account] : [];
                       if (account && numbers.length === 1 && !callerNumber) {
-                        window.setTimeout(() => updateSenderConfig('ai_voice', { ai_voice: { account, callerNumber: numbers[0].number, voiceAgent, retry } }), 0);
+                        window.setTimeout(() => updateSenderConfig('ai_voice', { ai_voice: { account, callerNumber: numbers[0].number, agentId, retry } }), 0);
                       }
 
                       const autoHint =
@@ -2264,7 +2247,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                               options={VOICE_ACCOUNTS.map((a) => ({ value: a, label: a }))}
                               onChange={(v) =>
                                 updateSenderConfig('ai_voice', {
-                                  ai_voice: { account: v, callerNumber: '', voiceAgent, retry },
+                                  ai_voice: { account: v, callerNumber: '', agentId, retry },
                                 })
                               }
                               rightLink={
@@ -2284,7 +2267,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                               }))}
                               onChange={(v) =>
                                 updateSenderConfig('ai_voice', {
-                                  ai_voice: { account, callerNumber: v, voiceAgent, retry },
+                                  ai_voice: { account, callerNumber: v, agentId, retry },
                                 })
                               }
                               rightLink={autoHint}
@@ -2294,33 +2277,19 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                             Ensure this number is approved for outbound campaigns with your telecom provider
                           </p>
 
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-medium text-text-secondary">Voice agent</label>
-                              <button
-                                type="button"
-                                onClick={() => alert('Preview coming soon')}
-                                className="text-xs font-semibold text-cyan hover:underline"
-                              >
-                                Preview agent →
-                              </button>
-                            </div>
-                            <SimpleDropdownSelect
-                              label=""
-                              placeholder="Select agent..."
-                              value={(voiceAgent as any) || ''}
-                              options={VOICE_AGENTS.map((a) => ({ value: a.name as any, label: `${a.name} · ${a.langs}` }))}
-                              onChange={(v) => updateSenderConfig('ai_voice', { ai_voice: { account, callerNumber, voiceAgent: v, retry } })}
-                            />
-                            <p className="text-[11px] text-text-secondary">
-                              The selected agent&apos;s script and persona will be used for this campaign
-                            </p>
-                          </div>
+                          <VoiceAgentPicker
+                            agentId={agentId}
+                            onChange={(v) =>
+                              updateSenderConfig('ai_voice', {
+                                ai_voice: { account, callerNumber, agentId: v, retry },
+                              })
+                            }
+                          />
 
                           <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
                             <button
                               type="button"
-                              onClick={() => updateSenderConfig('ai_voice', { ai_voice: { account, callerNumber, voiceAgent, retry: { ...retry, enabled: !retry.enabled } } })}
+                              onClick={() => updateSenderConfig('ai_voice', { ai_voice: { account, callerNumber, agentId, retry: { ...retry, enabled: !retry.enabled } } })}
                               className="flex w-full items-center justify-between text-left"
                             >
                               <span className="text-xs font-semibold text-text-primary">Retry settings</span>
@@ -2351,7 +2320,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                                             ai_voice: {
                                               account,
                                               callerNumber,
-                                              voiceAgent,
+                                              agentId,
                                               retry: { ...retry, maxRetries: Math.min(5, Math.max(0, Number(e.target.value || 0))) },
                                             },
                                           })
@@ -2371,7 +2340,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                                               ai_voice: {
                                                 account,
                                                 callerNumber,
-                                                voiceAgent,
+                                                agentId,
                                                 retry: { ...retry, delayValue: Math.max(1, Number(e.target.value || 1)) },
                                               },
                                             })
@@ -2391,7 +2360,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                                               ai_voice: {
                                                 account,
                                                 callerNumber,
-                                                voiceAgent,
+                                                agentId,
                                                 retry: { ...retry, delayUnit: v },
                                               },
                                             })
@@ -2418,7 +2387,7 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
                                                 ai_voice: {
                                                   account,
                                                   callerNumber,
-                                                  voiceAgent,
+                                                  agentId,
                                                   retry: {
                                                     ...retry,
                                                     retryOn: { ...retry.retryOn, [x.key]: e.target.checked },

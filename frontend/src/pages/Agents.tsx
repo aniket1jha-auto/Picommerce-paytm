@@ -35,11 +35,19 @@ function AgentCard({ agent }: { agent: Agent }) {
             <p className="text-sm text-text-secondary mt-0.5">{config.description}</p>
           </div>
         </div>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status].bg} ${STATUS_STYLES[status].text}`}
-        >
-          {status}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className="rounded-full border border-border-subtle bg-surface px-1.5 h-5 text-[10px] font-medium text-text-secondary tabular-nums inline-flex items-center"
+            title="Configuration version"
+          >
+            v{agent.version}
+          </span>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status].bg} ${STATUS_STYLES[status].text}`}
+          >
+            {status}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 pt-4 border-t border-[#E5E7EB]">

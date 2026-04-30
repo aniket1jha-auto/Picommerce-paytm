@@ -1,3 +1,6 @@
+import type { AgentKBAttachment } from './knowledgeBase';
+export type { AgentKBAttachment };
+
 export type AgentType = 'voice' | 'chat';
 export type AgentStatus = 'draft' | 'testing' | 'deployed' | 'paused';
 export type VoiceType = 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' | 'cedar' | 'marin';
@@ -114,6 +117,13 @@ export interface AgentConfiguration {
 
   builtInTools: string[];
   customFunctions: CustomFunction[];
+
+  /**
+   * Connected knowledge sources (Phase 2).
+   * Inline within the Instructions step — sibling to global tools.
+   * See docs/KB_SPEC.md §6, types/knowledgeBase.ts
+   */
+  knowledgeBases?: AgentKBAttachment[];
 
   // Step 5: Advanced Settings (renumbered from former step 6)
   audioConfig: {

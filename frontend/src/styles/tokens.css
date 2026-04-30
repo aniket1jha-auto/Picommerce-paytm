@@ -1,0 +1,196 @@
+/* ──────────────────────────────────────────────────────────────────────
+ * tokens.css — Phase 1.5 colour-system correction.
+ *
+ * Single source of truth for the visual system. Light mode only.
+ *
+ * Anchor: deep navy (--brand-*) + Paytm bright blue (--blue-*) on
+ * cool slate neutrals. Reads as financial-grade, calm, enterprise.
+ *
+ * Two-colour role discipline (DO NOT swap):
+ *   --brand-*  · primary CTAs, page headers, active sidebar item,
+ *                completed-status backgrounds, the π logo navy stop.
+ *   --blue-*   · focus rings, links, live indicators, info badges,
+ *                AI-touched surfaces, the π logo bright stop.
+ * Forbidden: bright blue on primary CTAs · navy on body text ·
+ * both colours as fills on the same component (logo excepted) ·
+ * any violet token. Violet appears only as chart-7 (contained).
+ *
+ * Naming follows the brief verbatim. globals.css bridges these
+ * into Tailwind utilities via the @theme block.
+ * ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ─── Color · neutrals (cool slate) ───────────────────────────── */
+  /* Replaces the warm-stone neutrals from Phase 1. Paytm-style:
+     cool, crisp, financial-app. */
+
+  --bg-canvas:         #F8FAFC;
+  --bg-surface:        #FFFFFF;
+  --bg-surface-raised: #FFFFFF;
+  --bg-subtle:         #F1F5F9;
+  --bg-muted:          #E2E8F0;
+
+  --border-subtle:     #E2E8F0;
+  --border-default:    #CBD5E1;
+  --border-strong:     #94A3B8;
+
+  --text-primary:      #0F172A;
+  --text-secondary:    #334155;
+  --text-tertiary:     #64748B;
+  --text-disabled:     #94A3B8;
+  --text-inverse:      #F8FAFC;
+
+  /* ─── Color · primary brand (deep navy) ───────────────────────── */
+  /* The brand anchor. Primary CTAs, page-level headers, active
+     navigation, completed-status surfaces, logo navy stop. */
+
+  --brand-50:  #EBF1FB;
+  --brand-100: #D1DEF5;
+  --brand-200: #A3BCEB;
+  --brand-300: #6E94DC;
+  --brand-400: #4570CC;
+  --brand-500: #1F4FBF;
+  --brand-600: #173FA0;
+  --brand-700: #102E80;
+  --brand-800: #0A2160;
+  --brand-900: #061645;
+
+  /* ─── Color · secondary (Paytm bright blue) ───────────────────── */
+  /* Coexists with brand. Different role: focus rings, links,
+     live/voice indicators, info badges, AI moments, logo bright
+     stop. Energetic, supportive, never dominant. */
+
+  --blue-50:  #E5F8FE;
+  --blue-100: #BFEEFD;
+  --blue-200: #80DDFB;
+  --blue-300: #40CCF8;
+  --blue-400: #1AC1F4;
+  --blue-500: #00BAF2;
+  --blue-600: #0095C2;
+  --blue-700: #007293;
+  --blue-800: #004F66;
+  --blue-900: #002C3A;
+
+  /* ─── Color · semantic status (cool-shifted) ──────────────────── */
+  /* `info` shifts to the bright-blue family — info badges, scheduled
+     states, and informational toasts now read as Paytm blue. */
+
+  --success-bg:     #ECFDF5;
+  --success-border: #A7F3D0;
+  --success-text:   #065F46;
+  --success-solid:  #10B981;
+
+  --warning-bg:     #FFFBEB;
+  --warning-border: #FDE68A;
+  --warning-text:   #854D0E;
+  --warning-solid:  #F59E0B;
+
+  --danger-bg:      #FEF2F2;
+  --danger-border:  #FECACA;
+  --danger-text:    #991B1B;
+  --danger-solid:   #EF4444;
+
+  --info-bg:        #E5F8FE;
+  --info-border:    #BFEEFD;
+  --info-text:      #007293;
+  --info-solid:     #00BAF2;
+
+  /* ─── Color · logo only (navy → Paytm blue gradient) ──────────── */
+  /* The single "wow" use of colour in the system. Sweeps from deep
+     navy to bright Paytm blue. Used on the π mark only. */
+
+  --logo-gradient: linear-gradient(135deg, #1F4FBF 0%, #00BAF2 100%);
+  --logo-glow:     radial-gradient(circle, rgba(0, 186, 242, 0.30) 0%, transparent 70%);
+
+  /* ─── Color · chart palette (multi-series, used Phase 5+) ─────── */
+  /* 8-colour sequence used in order. Starts navy → bright blue (the
+     two anchors) → green/amber/red (semantic) → teal/violet/orange
+     (containment for richer multi-series). Don't deviate from this
+     order; Recharts and any other multi-series surface should iterate
+     this list. */
+
+  --chart-1: #1F4FBF;  /* navy        — primary series */
+  --chart-2: #00BAF2;  /* bright blue — secondary series */
+  --chart-3: #10B981;  /* green */
+  --chart-4: #F59E0B;  /* amber */
+  --chart-5: #EF4444;  /* red */
+  --chart-6: #14B8A6;  /* teal */
+  --chart-7: #8B5CF6;  /* violet — contained, only here */
+  --chart-8: #F97316;  /* orange */
+
+  /* ─── Typography · families ───────────────────────────────────── */
+
+  --font-ui:      'Inter', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', 'Fraunces', Georgia, serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* ─── Typography · weights ────────────────────────────────────── */
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+
+  /* ─── Spacing · 4px base ──────────────────────────────────────── */
+
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* ─── Radius ──────────────────────────────────────────────────── */
+
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* ─── Shadows · soft, layered ─────────────────────────────────── */
+  /* Discipline: shadow OR border, never both, on elevated surfaces.
+     Slate-shifted alpha (rgba(15, 23, 42)) to harmonise with the
+     cooler neutrals. */
+
+  --shadow-xs:    0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm:    0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md:    0 4px 8px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg:    0 12px 24px -6px rgba(15, 23, 42, 0.08), 0 4px 8px -4px rgba(15, 23, 42, 0.04);
+  --shadow-xl:    0 24px 48px -12px rgba(15, 23, 42, 0.12), 0 8px 16px -8px rgba(15, 23, 42, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(0, 186, 242, 0.25);
+
+  /* ─── Motion · easing + duration ──────────────────────────────── */
+
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-instant: 100ms;
+  --duration-fast:    160ms;
+  --duration-base:    240ms;
+  --duration-slow:    360ms;
+  --duration-slower:  500ms;
+
+  /* ─── Backdrop ────────────────────────────────────────────────── */
+
+  --backdrop-color: rgba(15, 23, 42, 0.40);
+  --backdrop-blur:  4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast:    0ms;
+    --duration-base:    0ms;
+    --duration-slow:    0ms;
+    --duration-slower:  0ms;
+  }
+}

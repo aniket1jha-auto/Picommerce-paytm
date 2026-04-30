@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import type { ChannelType } from '@/types';
@@ -9,8 +10,12 @@ import { AudienceStep } from './AudienceStep';
 import { ReviewStep } from './ReviewStep';
 import { ContentScheduleStep } from './ContentScheduleStep';
 import { JourneyBuilderStep } from './journey/JourneyBuilderStep';
+import { SlimStepper } from './SlimStepper';
 import type { CampaignJourneyState } from './journey/journeyTypes';
 import { buildPrebuiltJourney } from './journey/journeyTemplates';
+import { useCampaignStore } from '@/store/campaignStore';
+import { usePhaseData } from '@/hooks/usePhaseData';
+import { useToast } from '@/components/ui';
 
 export interface HighIntentCriterion {
   id: string;
@@ -55,7 +60,13 @@ export interface CampaignData {
         ai_voice?: {
           account: string;
           callerNumber: string;
-          voiceAgent: string;
+          /** Real agentStore agent ID; replaces the old free-text `voiceAgent` field (Phase 3.8). */
+          agentId: string;
+          /** Fallback behavior — how to handle no-answer / agent error. */
+          fallback?: {
+            onNoAnswer: 'retry' | 'sms' | 'skip';
+            onAgentError: 'sms' | 'skip';
+          };
           retry: {
             enabled: boolean;
             maxRetries: number;
@@ -262,6 +273,10 @@ interface CampaignWizardProps {
 }
 
 export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
+  const navigate = useNavigate();
+  const createCampaign = useCampaignStore((s) => s.createCampaign);
+  const { segments } = usePhaseData();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [campaignData, setCampaignData] = useState<CampaignData>(() => ({
@@ -292,11 +307,84 @@ export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
 
   function handleNext() {
     if (isLastStep) {
-      // Launch campaign — placeholder for actual submission
+      handleLaunch();
       return;
     }
     setDirection(1);
     setCurrentStep((s) => Math.min(s + 1, totalSteps));
+  }
+
+  /**
+   * Phase 3.7 — real launch handler. Persists the campaign via campaignStore,
+   * shows a toast, and navigates to the new campaign's detail page.
+   */
+  function handleLaunch() {
+    const segment = segments.find((s) => s.id === campaignData.segmentId);
+    const segmentSize = segment?.size ?? 0;
+    // Reachable: average per-channel reachability across selected channels.
+    const segmentReachable = (() => {
+      if (!segment?.reachability || campaignData.channels.length === 0) {
+        return segmentSize;
+      }
+      const sum = campaignData.channels
+        .map((ch) => segment.reachability![ch] ?? 0)
+        .reduce((a, b) => a + b, 0);
+      return Math.round(sum / campaignData.channels.length);
+    })();
+
+    const aiVoiceCfg = campaignData.senderConfig.ai_voice?.ai_voice;
+    const aiVoiceConfig =
+      campaignData.channels.includes('ai_voice') && aiVoiceCfg?.agentId
+        ? {
+            agentId: aiVoiceCfg.agentId,
+            fallback: aiVoiceCfg.fallback ?? {
+              onNoAnswer: 'retry' as const,
+              onAgentError: 'sms' as const,
+            },
+            retry: aiVoiceCfg.retry,
+          }
+        : undefined;
+
+    // Cheap launch validation — surfaces as toasts, doesn't block.
+    if (campaignData.channels.includes('ai_voice') && !aiVoiceConfig) {
+      toast({
+        kind: 'warning',
+        title: 'No voice agent attached',
+        body: 'AI Voice channel selected but no agent connected. Add one in Content & Schedule.',
+      });
+      return;
+    }
+
+    const budget = parseFloat(campaignData.goal.tentativeBudget) || 0;
+    const scheduledAt = (() => {
+      if (campaignData.schedule.type === 'one-time' && campaignData.schedule.date) {
+        const t = campaignData.schedule.time || '10:00';
+        return `${campaignData.schedule.date}T${t}:00`;
+      }
+      return undefined;
+    })();
+
+    const campaign = createCampaign({
+      name: campaignData.name || 'Untitled Campaign',
+      segmentId: campaignData.segmentId,
+      segmentName: segment?.name ?? 'Unknown segment',
+      segmentSize,
+      segmentReachable,
+      channels: campaignData.channels,
+      budgetAllocated: Math.round(budget * 100_000), // tentativeBudget is entered in lakh
+      scheduledAt,
+      aiVoiceConfig,
+    });
+
+    toast({
+      kind: 'success',
+      title: `Campaign "${campaign.name}" created`,
+      body: scheduledAt
+        ? `Scheduled. ${segmentReachable.toLocaleString('en-IN')} contacts queued.`
+        : `Saved as draft. Review and launch from the campaign detail.`,
+    });
+
+    navigate(`/campaigns/${campaign.id}`);
   }
 
   function handleBack() {
@@ -309,6 +397,44 @@ export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
     campaignData,
     onUpdate: handleUpdate,
   };
+
+  function handleStepJump(target: number) {
+    if (target >= currentStep) return;
+    setDirection(-1);
+    setCurrentStep(target);
+  }
+
+  function handleSaveDraft() {
+    toast({
+      kind: 'success',
+      title: 'Draft saved',
+      body: 'Your journey is saved locally. You can pick up where you left off.',
+    });
+  }
+
+  const isJourneyStep = currentStep === 3 && campaignData.campaignType === 'journey';
+
+  if (isJourneyStep) {
+    // Journey step takes over the whole wizard chrome — slim stepper + full-bleed canvas
+    // + docked footer live inside JourneyBuilderStep. Negative margins reclaim page padding
+    // so the canvas is genuinely edge-to-edge inside the main content area.
+    return (
+      <div className="-mx-8 -mb-5 flex flex-col" style={{ height: 'calc(100vh - 124px)' }}>
+        <div className="shrink-0 border-b border-border-subtle bg-surface">
+          <SlimStepper currentStep={currentStep} steps={steps} onStepClick={handleStepJump} />
+        </div>
+        <div className="min-h-0 flex-1">
+          <JourneyBuilderStep
+            {...stepProps}
+            onBack={handleBack}
+            onNext={handleNext}
+            onSaveDraft={handleSaveDraft}
+            isLastStep={isLastStep}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -328,16 +454,13 @@ export function CampaignWizard({ initialData }: CampaignWizardProps = {}) {
             animate="center"
             exit="exit"
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className={
-              currentStep === 3 && campaignData.campaignType === 'journey' ? 'min-h-[560px]' : 'p-6'
-            }
+            className="p-6"
           >
             {currentStep === 1 && <SetupStep {...stepProps} />}
             {currentStep === 2 && <AudienceStep {...stepProps} />}
             {currentStep === 3 && campaignData.campaignType === 'simple_send' && (
               <ContentScheduleStep {...stepProps} />
             )}
-            {currentStep === 3 && campaignData.campaignType === 'journey' && <JourneyBuilderStep {...stepProps} />}
             {currentStep === 4 && <ReviewStep {...stepProps} />}
           </motion.div>
         </AnimatePresence>

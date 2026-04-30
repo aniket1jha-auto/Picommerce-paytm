@@ -974,7 +974,7 @@ function TemplatesTab({
           {templates.length} template{templates.length !== 1 ? 's' : ''} configured for this channel
         </p>
         <button
-          onClick={() => onShowToast('Template builder coming soon', 'info')}
+          onClick={() => onShowToast('Template management lives in Content Library — open it from the sidebar', 'info')}
           className="flex items-center gap-1.5 rounded-md bg-[#002970] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#001f5c]"
         >
           <Plus size={13} />
@@ -988,7 +988,7 @@ function TemplatesTab({
           <FileText size={24} className="text-[#9CA3AF]" />
           <p className="text-sm text-[#6B7280]">No templates yet for this channel.</p>
           <button
-            onClick={() => onShowToast('Template builder coming soon', 'info')}
+            onClick={() => onShowToast('Template management lives in Content Library — open it from the sidebar', 'info')}
             className="mt-1 text-xs font-medium text-[#002970] underline-offset-2 hover:underline"
           >
             Create your first template
@@ -1025,7 +1025,7 @@ function TemplatesTab({
 
               {/* Edit button */}
               <button
-                onClick={() => onShowToast(`Editing "${tpl.name}" — template editor coming soon`, 'info')}
+                onClick={() => onShowToast(`Edit "${tpl.name}" in Content Library`, 'info')}
                 className="flex shrink-0 items-center gap-1 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] transition-colors hover:bg-[#F3F4F6]"
               >
                 <Pencil size={12} />
@@ -1299,13 +1299,13 @@ function PlatformConnections({ isConnected, onToast }: PlatformConnectionsProps)
             {isConnected ? (
               <>
                 <button
-                  onClick={() => onToast('OAuth flow for WhatsApp Business coming soon', 'info')}
+                  onClick={() => onToast('Real OAuth is out of v1 scope — connection state is mocked', 'info')}
                   className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
                 >
                   Reconnect
                 </button>
                 <button
-                  onClick={() => onToast('Template management coming soon', 'info')}
+                  onClick={() => onToast('Template management lives in Content Library', 'info')}
                   className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
                 >
                   Manage Templates
@@ -1313,7 +1313,7 @@ function PlatformConnections({ isConnected, onToast }: PlatformConnectionsProps)
               </>
             ) : (
               <button
-                onClick={() => onToast('OAuth flow for WhatsApp Business coming soon', 'info')}
+                onClick={() => onToast('Real OAuth is out of v1 scope — connection state is mocked', 'info')}
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors"
                 style={{ backgroundColor: '#25D366' }}
               >
@@ -1384,13 +1384,13 @@ function PlatformConnections({ isConnected, onToast }: PlatformConnectionsProps)
             {isConnected ? (
               <>
                 <button
-                  onClick={() => onToast('OAuth flow for Meta Business coming soon', 'info')}
+                  onClick={() => onToast('Real OAuth is out of v1 scope — connection state is mocked', 'info')}
                   className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
                 >
                   Reconnect
                 </button>
                 <button
-                  onClick={() => onToast('Ad account management coming soon', 'info')}
+                  onClick={() => onToast('Ad-account management lands in Phase 5', 'info')}
                   className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
                 >
                   Manage Ad Accounts
@@ -1398,7 +1398,7 @@ function PlatformConnections({ isConnected, onToast }: PlatformConnectionsProps)
               </>
             ) : (
               <button
-                onClick={() => onToast('OAuth flow for Meta Business coming soon', 'info')}
+                onClick={() => onToast('Real OAuth is out of v1 scope — connection state is mocked', 'info')}
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors"
                 style={{ backgroundColor: '#1877F2' }}
               >

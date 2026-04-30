@@ -36,6 +36,10 @@ export const mockAgents: Agent[] = [
       },
       builtInTools: ['google_calendar', 'crm', 'query'],
       customFunctions: [],
+      knowledgeBases: [
+        { knowledgeBaseId: 'kb-001', retrievalMode: 'when_asked', topK: 4, scoreThreshold: 0.65, citationStyle: 'inline' },
+        { knowledgeBaseId: 'kb-003', retrievalMode: 'when_uncertain', topK: 3, scoreThreshold: 0.7, citationStyle: 'footnote' },
+      ],
       audioConfig: {
         inputFormat: 'pcm16',
         outputFormat: 'pcm16',
@@ -113,6 +117,10 @@ export const mockAgents: Agent[] = [
       },
       builtInTools: ['query', 'handoff', 'crm'],
       customFunctions: [],
+      knowledgeBases: [
+        { knowledgeBaseId: 'kb-001', retrievalMode: 'when_asked', topK: 4, scoreThreshold: 0.65, citationStyle: 'inline' },
+        { knowledgeBaseId: 'kb-004', retrievalMode: 'always', topK: 4, scoreThreshold: 0.6, citationStyle: 'inline' },
+      ],
       audioConfig: {
         inputFormat: 'pcm16',
         outputFormat: 'pcm16',
@@ -190,6 +198,10 @@ export const mockAgents: Agent[] = [
       },
       builtInTools: ['google_calendar', 'send_text'],
       customFunctions: [],
+      knowledgeBases: [
+        { knowledgeBaseId: 'kb-002', retrievalMode: 'when_asked', topK: 3, scoreThreshold: 0.65, citationStyle: 'footnote' },
+        { knowledgeBaseId: 'kb-003', retrievalMode: 'when_asked', topK: 3, scoreThreshold: 0.7, citationStyle: 'footnote' },
+      ],
       audioConfig: {
         inputFormat: 'pcm16',
         outputFormat: 'pcm16',

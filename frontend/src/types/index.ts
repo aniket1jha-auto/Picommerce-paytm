@@ -38,6 +38,31 @@ export interface CampaignAnomaly {
   message: string;
 }
 
+/**
+ * Campaign-level config for AI Voice channel.
+ * Set when the campaign uses `ai_voice` and an agent is attached.
+ * Phase 3.8 — see docs/DEMO_FLOW.md Step 6.
+ */
+export interface CampaignAIVoiceConfig {
+  /** Reference to agentStore agent. Must be a deployed voice agent. */
+  agentId: string;
+  /** Future: prompt-variant id. v1 always uses the agent's default. */
+  promptVariantId?: string;
+  /** What to do if the agent fails or no-answers. */
+  fallback: {
+    onNoAnswer: 'retry' | 'sms' | 'skip';
+    onAgentError: 'sms' | 'skip';
+  };
+  /** Retry rules — mirrors the existing senderConfig.ai_voice.retry shape. */
+  retry: {
+    enabled: boolean;
+    maxRetries: number;
+    delayValue: number;
+    delayUnit: 'minutes' | 'hours';
+    retryOn: { noAnswer: boolean; busy: boolean; networkError: boolean };
+  };
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -73,6 +98,8 @@ export interface Campaign {
   scheduledAt?: string;
   startedAt?: string;
   completedAt?: string;
+  /** Set on campaigns that include the `ai_voice` channel. */
+  aiVoiceConfig?: CampaignAIVoiceConfig;
 }
 
 export interface InsightEvidence {

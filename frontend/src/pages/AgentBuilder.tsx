@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { BasicInfoStep } from '@/components/agents/builder/BasicInfoStep';
@@ -9,6 +9,7 @@ import { InstructionsStep } from '@/components/agents/builder/InstructionsStep';
 import { AdvancedStep } from '@/components/agents/builder/AdvancedStep';
 import { ReviewStep } from '@/components/agents/builder/ReviewStep';
 import { useAgentStore } from '@/store/agentStore';
+import { useToast } from '@/components/ui';
 import type { AgentConfiguration } from '@/types/agent';
 
 const STEPS = [
@@ -53,6 +54,7 @@ const DEFAULT_CONFIG: AgentConfiguration = {
   },
   builtInTools: [],
   customFunctions: [],
+  knowledgeBases: [],
   audioConfig: {
     inputFormat: 'pcm16',
     outputFormat: 'pcm16',
@@ -102,11 +104,43 @@ const DEFAULT_CONFIG: AgentConfiguration = {
   },
 };
 
-export function AgentBuilder() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [config, setConfig] = useState<AgentConfiguration>(DEFAULT_CONFIG);
+interface AgentBuilderProps {
+  /** Edit mode — when set, loads the agent's existing config and saves with updateAgent. */
+  mode?: 'create' | 'edit';
+}
+
+export function AgentBuilder({ mode = 'create' }: AgentBuilderProps) {
+  const { id: agentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const createAgent = useAgentStore((s) => s.createAgent);
+  const updateAgent = useAgentStore((s) => s.updateAgent);
+  const getAgentById = useAgentStore((s) => s.getAgentById);
+
+  const existingAgent = mode === 'edit' && agentId ? getAgentById(agentId) : undefined;
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [config, setConfig] = useState<AgentConfiguration>(
+    () => existingAgent?.config ?? DEFAULT_CONFIG,
+  );
+
+  // If the agent is loaded asynchronously (edge case during HMR), sync it in.
+  useEffect(() => {
+    if (mode === 'edit' && existingAgent) {
+      setConfig(existingAgent.config);
+    }
+  }, [mode, existingAgent]);
+
+  if (mode === 'edit' && !existingAgent) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Agent not found" />
+        <div className="rounded-lg border border-border-subtle bg-surface p-6 text-sm text-text-secondary">
+          No agent with ID <code className="font-mono">{agentId}</code> exists. It may have been deleted.
+        </div>
+      </div>
+    );
+  }
 
   const CurrentStepComponent = STEPS[currentStep - 1].component;
 
@@ -141,15 +175,34 @@ export function AgentBuilder() {
   }, [config.type]);
 
   const handleDeploy = () => {
+    if (mode === 'edit' && existingAgent) {
+      updateAgent(existingAgent.id, config);
+      toast({
+        kind: 'success',
+        title: `${config.name || existingAgent.config.name} updated`,
+        body: `Now on version ${existingAgent.version + 1}.`,
+      });
+      navigate(`/agents/${existingAgent.id}`);
+      return;
+    }
     const agent = createAgent(config);
+    toast({
+      kind: 'success',
+      title: `${config.name || 'Agent'} created`,
+      body: 'Status: draft. Test it before deploying.',
+    });
     navigate(`/agents/${agent.id}`);
   };
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Create Agent"
-        subtitle="Build and configure your AI agent step by step"
+        title={mode === 'edit' ? `Edit Agent — ${existingAgent?.config.name ?? ''}` : 'Create Agent'}
+        subtitle={
+          mode === 'edit'
+            ? `Currently v${existingAgent?.version}. Saving creates a new version.`
+            : 'Build and configure your AI agent step by step'
+        }
       />
 
       {/* Progress Steps */}

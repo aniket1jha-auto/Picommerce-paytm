@@ -19,7 +19,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import type { Connection, EdgeChange, NodeChange, Node } from '@xyflow/react';
-import { Maximize2, Minus, Plus, Map as MapIcon, Sparkles, PencilLine, ArrowRight } from 'lucide-react';
+import { Sparkles, PencilLine, ArrowRight, X } from 'lucide-react';
 import type { CampaignData } from '@/components/campaign/CampaignWizard';
 import type {
   CampaignJourneyState,
@@ -32,7 +32,10 @@ import { TRIGGER_KINDS, ENTRY_TRIGGER_KINDS, newNodeId } from './journeyTypes';
 import { createJourneyNode } from './journeyConstants';
 import { JourneyFlowNode as JourneyFlowNodeComponent } from './JourneyFlowNode';
 import { JourneyBezierEdge } from './JourneyBezierEdge';
-import { JourneyNodePalette, JOURNEY_PALETTE_DRAG_TYPE } from './JourneyNodePalette';
+import { JourneyPaletteDrawer, JOURNEY_PALETTE_DRAG_TYPE } from './JourneyPaletteDrawer';
+import type { PaletteCategoryId } from './JourneyPaletteDrawer';
+import { JourneyFloatingControls } from './JourneyFloatingControls';
+import { JourneyCanvasFooter } from './JourneyCanvasFooter';
 import { JourneyNodeConfigPanel } from './JourneyNodeConfigPanel';
 import { usePhaseData } from '@/hooks/usePhaseData';
 import { PrebuiltJourneyModal } from './PrebuiltJourneyModal';
@@ -42,9 +45,46 @@ import { validateJourney } from './journeyValidation';
 const nodeTypes = { journeyNode: JourneyFlowNodeComponent };
 const edgeTypes = { journeyBezier: JourneyBezierEdge };
 
+/** Derive a human label for an edge based on its source node + source handle id. */
+function deriveEdgeLabel(
+  sourceNode: JourneyFlowNode | undefined,
+  sourceHandle: string,
+): string | null {
+  if (!sourceNode || !sourceHandle || sourceHandle === 'out') return null;
+  const data = sourceNode.data as { kind?: string; pathLabels?: string[]; variants?: Array<{ label?: string }>; dispositionLabels?: Record<string, string>; outputLabels?: Record<string, string> };
+  const kind = data.kind ?? '';
+  if (kind === 'voice_agent') {
+    return data.dispositionLabels?.[sourceHandle] ?? prettifyHandle(sourceHandle);
+  }
+  if (kind === 'chat_agent') {
+    return data.outputLabels?.[sourceHandle] ?? prettifyHandle(sourceHandle);
+  }
+  if (kind === 'condition' && sourceHandle.startsWith('path_')) {
+    const idx = Number(sourceHandle.slice(5));
+    return data.pathLabels?.[idx] ?? `Path ${idx + 1}`;
+  }
+  if (kind === 'ab_split' && sourceHandle.startsWith('var_')) {
+    const idx = Number(sourceHandle.slice(4));
+    return data.variants?.[idx]?.label ?? `Variant ${String.fromCharCode(65 + idx)}`;
+  }
+  return prettifyHandle(sourceHandle);
+}
+
+function prettifyHandle(h: string): string {
+  return h
+    .split('_')
+    .map((s) => (s.length ? s[0].toUpperCase() + s.slice(1) : s))
+    .join(' ');
+}
+
 interface JourneyBuilderStepProps {
   campaignData: CampaignData;
   onUpdate: (updates: Partial<CampaignData>) => void;
+  /** Wizard footer wiring — passed by CampaignWizard when on journey step. */
+  onBack?: () => void;
+  onNext?: () => void;
+  onSaveDraft?: () => void;
+  isLastStep?: boolean;
 }
 
 function hasTrigger(nodes: JourneyFlowNode[]) {
@@ -71,6 +111,10 @@ function isBlankJourney(j: CampaignJourneyState) {
 function JourneyBuilderCanvas({
   campaignData,
   onUpdate,
+  onBack,
+  onNext,
+  onSaveDraft,
+  isLastStep,
 }: JourneyBuilderStepProps) {
   const journey = campaignData.journey;
   const { fitView, screenToFlowPosition, zoomIn, zoomOut } = useReactFlow();
@@ -78,11 +122,14 @@ function JourneyBuilderCanvas({
   const audienceSize = Math.max(1, segments.find((s) => s.id === campaignData.segmentId)?.size ?? 10_000);
 
   const [templateOpen, setTemplateOpen] = useState(false);
-  const [showMiniMap, setShowMiniMap] = useState(true);
+  const [showMiniMap, setShowMiniMap] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [starterOpen, setStarterOpen] = useState(() => isBlankJourney(campaignData.journey));
   const [pendingFitView, setPendingFitView] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteCategory, setPaletteCategory] = useState<PaletteCategoryId | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const historyRef = useRef<CampaignJourneyState[]>([]);
   const isUndoing = useRef(false);
@@ -105,8 +152,31 @@ function JourneyBuilderCanvas({
     return n ?? null;
   }, [journey.nodes]);
 
+  // Right-edge slot is shared between the palette drawer and the config drawer.
+  // Config takes precedence — when a node is selected, close the palette automatically.
+  useEffect(() => {
+    if (selectedNode) setPaletteOpen(false);
+  }, [selectedNode]);
+
   const triggerPresent = hasTrigger(journey.nodes);
   const validation = useMemo(() => validateJourney(journey.nodes, journey.edges), [journey.nodes, journey.edges]);
+
+  // Decorate edges with `data.active` based on selected node + auto-derive
+  // a label from the source handle (Voice agent / Condition / Split).
+  const decoratedEdges = useMemo(() => {
+    const selectedId = selectedNode?.id;
+    const nodeById = new Map(journey.nodes.map((n) => [n.id, n] as const));
+    return journey.edges.map((e) => {
+      const isActive = !!selectedId && (e.source === selectedId || e.target === selectedId);
+      const prev = (e.data ?? {}) as Record<string, unknown>;
+      const existingLabel = (prev.label as string | undefined) ?? undefined;
+      const sourceHandle = (e.sourceHandle as string | undefined) ?? 'out';
+      const derived = existingLabel ?? deriveEdgeLabel(nodeById.get(e.source), sourceHandle) ?? undefined;
+      const nextData: Record<string, unknown> = { ...prev, active: isActive };
+      if (derived) nextData.label = derived;
+      return { ...e, data: nextData };
+    });
+  }, [journey.edges, journey.nodes, selectedNode?.id]);
 
   const addNodeAt = useCallback(
     (kind: JourneyNodeKind, position: { x: number; y: number }) => {
@@ -169,6 +239,10 @@ function JourneyBuilderCanvas({
     (conn: Connection) => {
       if (!conn.source || !conn.target) return;
       recordHistory();
+      // Derive a default edge label from the source handle (Voice agent / Condition / Split branches).
+      const sourceNode = journey.nodes.find((n) => n.id === conn.source);
+      const sourceHandle = conn.sourceHandle ?? 'out';
+      const label = deriveEdgeLabel(sourceNode, sourceHandle);
       setJourney({
         nodes: journey.nodes,
         edges: addEdge(
@@ -176,8 +250,7 @@ function JourneyBuilderCanvas({
             ...conn,
             id: `je_${conn.source}_${conn.target}_${conn.sourceHandle ?? 'd'}`,
             type: 'journeyBezier',
-            animated: true,
-            style: { stroke: '#94A3B8', strokeWidth: 1.5 },
+            data: label ? { label } : undefined,
           },
           journey.edges,
         ),
@@ -254,9 +327,22 @@ function JourneyBuilderCanvas({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      const inField = t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable;
+
+      if (!inField && e.key === '/') {
+        e.preventDefault();
+        setPaletteCategory((cur) => cur ?? 'messaging');
+        setPaletteOpen(true);
+        return;
+      }
+      if (!inField && (e.key === '?' || (e.shiftKey && e.key === '/'))) {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-        const t = e.target as HTMLElement;
-        if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+        if (inField) return;
         const prev = historyRef.current.pop();
         if (!prev) return;
         e.preventDefault();
@@ -264,6 +350,25 @@ function JourneyBuilderCanvas({
         setJourney(prev);
         requestAnimationFrame(() => {
           isUndoing.current = false;
+        });
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+        if (inField) return;
+        const sel = journey.nodes.find((n) => n.selected);
+        if (!sel || isEntryNode(sel)) return;
+        e.preventDefault();
+        recordHistory();
+        const cur = sel.data as unknown as JourneyNodeData;
+        const copy: JourneyFlowNode = {
+          ...sel,
+          id: newNodeId(),
+          position: { x: sel.position.x + 48, y: sel.position.y + 48 },
+          data: { ...sel.data, label: `${cur.label} copy` },
+          selected: true,
+        };
+        setJourney({
+          nodes: [...journey.nodes.map((n) => ({ ...n, selected: false })), copy],
+          edges: journey.edges,
         });
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -375,119 +480,33 @@ function JourneyBuilderCanvas({
   );
 
   const passedCount = validation.checks.filter((c) => c.ok).length;
+  const validationStatus: 'green' | 'amber' | 'red' = (() => {
+    if (validation.issues.length === 0) return 'green';
+    // No severity field today — treat any issue as amber until we wire severity.
+    return 'amber';
+  })();
+  const validationDotClass =
+    validationStatus === 'green'
+      ? 'bg-success'
+      : validationStatus === 'amber'
+        ? 'bg-warning'
+        : 'bg-error';
+
+  function openPalette(category: PaletteCategoryId) {
+    // Right-edge slot is shared with config drawer — close the config when palette opens.
+    if (selectedNode) closePanel();
+    setPaletteCategory(category);
+    setPaletteOpen(true);
+  }
 
   return (
-    <div className="relative flex h-[min(72vh,720px)] min-h-[520px] flex-col border-t border-[#E5E7EB]">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E5E7EB] bg-[#FAFAFA] px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-text-primary">Journey Builder</span>
-          <span className="rounded-full bg-[#E5E7EB] px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-            {journey.nodes.length} nodes
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTemplateOpen(true)}
-            className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-[#F9FAFB]"
-          >
-            Use pre-built journey
-          </button>
-          <div className="mx-1 hidden h-5 w-px bg-[#E5E7EB] sm:block" />
-          <button
-            type="button"
-            aria-label="Zoom out"
-            onClick={() => zoomOut({ duration: 200 })}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-text-secondary hover:bg-[#F9FAFB]"
-          >
-            <Minus size={16} />
-          </button>
-          <button
-            type="button"
-            aria-label="Zoom in"
-            onClick={() => zoomIn({ duration: 200 })}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-text-secondary hover:bg-[#F9FAFB]"
-          >
-            <Plus size={16} />
-          </button>
-          <button
-            type="button"
-            aria-label="Fit to screen"
-            onClick={() => fitView({ padding: 0.2, duration: 280 })}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-text-secondary hover:bg-[#F9FAFB]"
-          >
-            <Maximize2 size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setValidationOpen((v) => !v)}
-            className="rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-[#F9FAFB]"
-          >
-            Validate journey
-          </button>
-          <button
-            type="button"
-            aria-label="Toggle minimap"
-            onClick={() => setShowMiniMap((m) => !m)}
-            className={[
-              'inline-flex h-8 w-8 items-center justify-center rounded-md border bg-white',
-              showMiniMap ? 'border-cyan text-cyan' : 'border-[#E5E7EB] text-text-secondary hover:bg-[#F9FAFB]',
-            ].join(' ')}
-          >
-            <MapIcon size={16} />
-          </button>
-        </div>
-      </div>
-
-      {validationOpen && (
-        <div className="border-b border-[#E5E7EB] bg-white px-3 py-2">
-          <p className="text-xs font-medium text-text-primary">
-            {validation.issues.length === 0 ? (
-              <span className="text-emerald-700">
-                ✅ All checks passed ({passedCount}/{validation.checks.length})
-              </span>
-            ) : (
-              <span>
-                {passedCount}/{validation.checks.length} checks passed —{' '}
-                <span className="text-red-600">{validation.issues.length} issues</span>
-              </span>
-            )}
-          </p>
-          {validation.checks.length > 0 && (
-            <ul className="mt-1 space-y-0.5 text-[11px] text-text-secondary">
-              {validation.checks.map((c) => (
-                <li key={c.id}>
-                  {c.ok ? '✅' : '❌'} {c.label}
-                </li>
-              ))}
-            </ul>
-          )}
-          {validation.issues.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {validation.issues.map((iss) => (
-                <li key={iss.id}>
-                  <button
-                    type="button"
-                    className="text-left text-xs text-red-700 underline decoration-red-200 hover:decoration-red-600"
-                    onClick={() => {
-                      if (iss.nodeId) focusNode(iss.nodeId);
-                    }}
-                  >
-                    {iss.message}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      <div className="flex min-h-0 flex-1">
-        <JourneyNodePalette hasTrigger={triggerPresent} onAddKind={addAtCenter} />
-        <div className="relative min-w-0 flex-1 journey-flow-surface">
+    <div className="relative flex h-full flex-col bg-canvas">
+      {/* Canvas region — relative anchor for absolute overlays (palette, controls, panel, starter) */}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex-1 min-w-0 journey-flow-surface">
           <ReactFlow
             nodes={journey.nodes}
-            edges={journey.edges}
+            edges={decoratedEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -505,26 +524,271 @@ function JourneyBuilderCanvas({
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{
               type: 'journeyBezier',
-              animated: true,
-              markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#94A3B8' },
-              style: { stroke: '#94A3B8', strokeWidth: 1.5 },
+              markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: 'var(--border-strong)' },
             }}
-            className="bg-[#F4F4F5]"
+            className="!bg-canvas"
           >
-            <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#D4D4D8" />
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={16}
+              size={1}
+              color="var(--border-subtle)"
+            />
             {showMiniMap && (
               <MiniMap
-                className="!bottom-3 !right-3 !rounded-lg !border !border-[#E5E7EB] !bg-white"
+                className="!bottom-4 !right-4 !rounded-md !border !border-border-subtle !bg-surface !shadow-[var(--shadow-md)]"
                 zoomable
                 pannable
                 nodeStrokeWidth={2}
-                maskColor="rgb(0 0 0 / 0.08)"
+                maskColor="rgba(15, 23, 42, 0.08)"
               />
             )}
           </ReactFlow>
 
-          {/* starter screen is rendered as full-page state above */}
+          {/* Palette rail + slide-over drawer (absolute, left) */}
+          <JourneyPaletteDrawer
+            open={paletteOpen}
+            category={paletteCategory}
+            hasTrigger={triggerPresent}
+            onOpenCategory={openPalette}
+            onClose={() => setPaletteOpen(false)}
+            onAddKind={addAtCenter}
+            onOpenTemplates={() => setTemplateOpen(true)}
+          />
+
+          {/* Top-left: Use pre-built + Validate (with status dot).
+              Palette + config share the right edge — top-level canvas controls anchor left. */}
+          <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTemplateOpen(true)}
+              className="inline-flex items-center rounded-md px-3 py-1.5 text-[12px] font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+            >
+              Use pre-built journey
+            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setValidationOpen((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-md border border-border-default bg-surface px-3 py-1.5 text-[12px] font-medium text-text-primary shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-raised"
+              >
+                <span className={['h-2 w-2 rounded-full', validationDotClass].join(' ')} aria-hidden />
+                Validate journey
+              </button>
+              {validationOpen && (
+                <div className="absolute left-0 top-[calc(100%+6px)] z-30 w-[340px] overflow-hidden rounded-md border border-border-subtle bg-surface shadow-[var(--shadow-popover)]">
+                  <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className={['h-2 w-2 rounded-full', validationDotClass].join(' ')} aria-hidden />
+                      <p className="text-[12px] font-semibold text-text-primary">
+                        {validation.issues.length === 0 ? (
+                          <>All checks passed</>
+                        ) : (
+                          <>
+                            <span className="tabular-nums">{passedCount}</span>
+                            <span className="text-text-tertiary"> / </span>
+                            <span className="tabular-nums">{validation.checks.length}</span>
+                            <span className="ml-1 text-text-secondary">passing</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setValidationOpen(false)}
+                      className="rounded p-0.5 text-text-tertiary hover:bg-surface-raised hover:text-text-primary"
+                      aria-label="Close"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  {validation.issues.length === 0 ? (
+                    <p className="px-3 py-3 text-[12px] text-text-secondary">
+                      Journey is ready. You can proceed to Review.
+                    </p>
+                  ) : (
+                    <ul className="max-h-[280px] overflow-y-auto py-1">
+                      {validation.issues.map((iss) => (
+                        <li key={iss.id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-[12px] text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+                            onClick={() => {
+                              if (iss.nodeId) focusNode(iss.nodeId);
+                              setValidationOpen(false);
+                            }}
+                          >
+                            <span
+                              className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-error"
+                              aria-hidden
+                            />
+                            <span className="flex-1 leading-snug">{iss.message}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Floating cluster bottom-left */}
+          <JourneyFloatingControls
+            minimapVisible={showMiniMap}
+            onAddNode={() => openPalette(paletteCategory ?? 'messaging')}
+            onZoomIn={() => zoomIn({ duration: 200 })}
+            onZoomOut={() => zoomOut({ duration: 200 })}
+            onFitView={() => fitView({ padding: 0.2, duration: 280 })}
+            onToggleMinimap={() => setShowMiniMap((m) => !m)}
+            onShowShortcuts={() => setShortcutsOpen((v) => !v)}
+          />
+
+          {/* Shortcuts popover (anchored bottom-left, above the floating cluster) */}
+          {shortcutsOpen && (
+            <div className="absolute bottom-4 left-[124px] z-30 w-[280px] rounded-md border border-border-subtle bg-surface p-3 shadow-[var(--shadow-popover)]">
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] font-semibold text-text-primary">Keyboard shortcuts</p>
+                <button
+                  type="button"
+                  onClick={() => setShortcutsOpen(false)}
+                  className="text-text-tertiary hover:text-text-primary"
+                  aria-label="Close"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <ul className="mt-2 space-y-1 text-[12px] text-text-secondary">
+                <ShortcutRow keys={['/']} label="Open node palette" />
+                <ShortcutRow keys={['Esc']} label="Close palette / drawer" />
+                <ShortcutRow keys={['Del']} label="Remove selected node" />
+                <ShortcutRow keys={['⌘', 'D']} label="Duplicate selected" />
+                <ShortcutRow keys={['⌘', 'Z']} label="Undo" />
+                <ShortcutRow keys={['?']} label="Toggle this popover" />
+              </ul>
+            </div>
+          )}
+
+          {/* Starter overlay — only when blank */}
+          {starterOpen && !templateOpen && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-canvas/85 p-6 backdrop-blur-sm">
+              <div className="w-full max-w-3xl rounded-xl border border-border-subtle bg-surface p-6 shadow-[var(--shadow-xl)]">
+                <div className="flex flex-col gap-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
+                    Get started
+                  </p>
+                  <h3 className="text-[18px] font-semibold text-text-primary">
+                    Choose how you want to build this journey
+                  </h3>
+                  <p className="text-[13px] text-text-secondary">
+                    Start with a proven template or build a custom flow from scratch.
+                  </p>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateOpen(true)}
+                    className="group flex h-full flex-col rounded-lg border border-brand-200 bg-gradient-to-br from-surface to-brand-50 p-5 text-left transition-all hover:shadow-[var(--shadow-md)]"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-brand-500 text-white">
+                          <Sparkles size={18} />
+                        </span>
+                        <span className="text-[13px] font-semibold text-text-primary">
+                          Start with a pre-built journey
+                        </span>
+                      </div>
+                      <ArrowRight
+                        size={16}
+                        className="text-brand-600 transition-transform group-hover:translate-x-0.5"
+                      />
+                    </div>
+                    <p className="mt-2 text-[12px] leading-relaxed text-text-secondary">
+                      Pick from proven flows: Cart Recovery, KYC re-engagement, Welcome onboarding, and more.
+                    </p>
+                    <p className="mt-3 text-[12px] font-semibold text-brand-600">Browse templates</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startFromScratch}
+                    className="group flex h-full flex-col rounded-lg border border-border-subtle bg-surface p-5 text-left transition-all hover:border-border-default hover:shadow-[var(--shadow-md)]"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-text-primary text-white">
+                          <PencilLine size={18} />
+                        </span>
+                        <span className="text-[13px] font-semibold text-text-primary">
+                          Start from scratch
+                        </span>
+                      </div>
+                      <ArrowRight
+                        size={16}
+                        className="text-text-secondary transition-transform group-hover:translate-x-0.5"
+                      />
+                    </div>
+                    <p className="mt-2 text-[12px] leading-relaxed text-text-secondary">
+                      Open the canvas with just the entry node. Add steps from the palette on the left rail.
+                    </p>
+                    <p className="mt-3 text-[12px] font-semibold text-text-primary">Open canvas</p>
+                  </button>
+                </div>
+                <div className="mt-5 flex items-center justify-between gap-3 rounded-md border border-border-subtle bg-bg-subtle px-4 py-3">
+                  <p className="text-[12px] text-text-secondary">
+                    You can always pick a template later from the templates rail icon.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStarterOpen(false)}
+                    className="text-[12px] font-semibold text-text-secondary hover:text-text-primary"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Right-click context menu */}
+          {ctxMenu && (
+            <div
+              className="fixed z-[60] min-w-[160px] rounded-md border border-border-subtle bg-surface py-1 text-[13px] shadow-[var(--shadow-popover)]"
+              style={{ left: ctxMenu.x, top: ctxMenu.y }}
+            >
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left hover:bg-surface-raised"
+                onClick={() => runCtx('rename')}
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left hover:bg-surface-raised"
+                onClick={() => runCtx('duplicate')}
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left hover:bg-surface-raised"
+                onClick={() => runCtx('note')}
+              >
+                Add note
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left text-error hover:bg-error-soft"
+                onClick={() => runCtx('delete')}
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Right-side config panel — keeps its existing width-transition behavior */}
         <JourneyNodeConfigPanel
           node={selectedNode}
           onClose={closePanel}
@@ -533,103 +797,44 @@ function JourneyBuilderCanvas({
         />
       </div>
 
+      {/* Docked footer (always visible) */}
+      <JourneyCanvasFooter
+        onBack={onBack ?? (() => undefined)}
+        onSaveDraft={onSaveDraft ?? (() => undefined)}
+        onNext={onNext ?? (() => undefined)}
+        isLastStep={isLastStep ?? false}
+        nextDisabled={validation.issues.length > 0}
+        nextDisabledReason={
+          validation.issues.length > 0
+            ? `${validation.issues.length} validation issue${validation.issues.length === 1 ? '' : 's'} — open the validate popover to review`
+            : undefined
+        }
+      />
+
       <PrebuiltJourneyModal
         open={templateOpen}
         onClose={() => setTemplateOpen(false)}
         onSelect={applyTemplate}
       />
-
-      {starterOpen && !templateOpen && (
-        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[#F4F4F5] p-6">
-          <div className="w-full max-w-3xl rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl ring-1 ring-black/[0.04]">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Get started</p>
-              <h3 className="text-lg font-semibold text-text-primary">Choose how you want to build this journey</h3>
-              <p className="text-sm text-text-secondary">
-                Start with a proven template or build a custom flow from scratch.
-              </p>
-            </div>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setTemplateOpen(true)}
-                className="group flex h-full flex-col rounded-xl border border-cyan/30 bg-gradient-to-br from-cyan/5 to-cyan/10 p-5 text-left transition-all hover:shadow-md hover:ring-2 hover:ring-cyan/30"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-cyan text-white shadow-sm">
-                      <Sparkles size={18} />
-                    </span>
-                    <span className="text-sm font-semibold text-text-primary">Start with a pre-built journey</span>
-                  </div>
-                  <ArrowRight size={16} className="text-cyan transition-transform group-hover:translate-x-0.5" />
-                </div>
-                <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-                  Pick from proven flows like Recovery, KYC re-engagement, Welcome onboarding, and more.
-                </p>
-                <p className="mt-3 text-xs font-semibold text-cyan">Browse templates</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={startFromScratch}
-                className="group flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 text-left transition-all hover:border-[#D1D5DB] hover:shadow-md"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#111827] text-white shadow-sm">
-                      <PencilLine size={18} />
-                    </span>
-                    <span className="text-sm font-semibold text-text-primary">Start from scratch</span>
-                  </div>
-                  <ArrowRight size={16} className="text-text-secondary transition-transform group-hover:translate-x-0.5" />
-                </div>
-                <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-                  Open the playground with only the entry node. Add steps by dragging nodes from the left palette.
-                </p>
-                <p className="mt-3 text-xs font-semibold text-text-primary">Open playground</p>
-              </button>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-[#FAFAFA] px-4 py-3">
-              <p className="text-xs text-text-secondary">You can always start from a template later.</p>
-              <button
-                type="button"
-                onClick={() => setStarterOpen(false)}
-                className="text-xs font-semibold text-text-secondary hover:text-text-primary"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {ctxMenu && (
-        <div
-          className="fixed z-[60] min-w-[160px] rounded-lg border border-[#E5E7EB] bg-white py-1 text-sm shadow-lg ring-1 ring-black/5"
-          style={{ left: ctxMenu.x, top: ctxMenu.y }}
-        >
-          <button type="button" className="block w-full px-3 py-2 text-left hover:bg-[#F9FAFB]" onClick={() => runCtx('rename')}>
-            Rename
-          </button>
-          <button type="button" className="block w-full px-3 py-2 text-left hover:bg-[#F9FAFB]" onClick={() => runCtx('duplicate')}>
-            Duplicate
-          </button>
-          <button type="button" className="block w-full px-3 py-2 text-left hover:bg-[#F9FAFB]" onClick={() => runCtx('note')}>
-            Add note
-          </button>
-          <button
-            type="button"
-            className="block w-full px-3 py-2 text-left text-red-600 hover:bg-red-50"
-            onClick={() => runCtx('delete')}
-          >
-            Delete
-          </button>
-        </div>
-      )}
     </div>
+  );
+}
+
+function ShortcutRow({ keys, label }: { keys: string[]; label: string }) {
+  return (
+    <li className="flex items-center justify-between gap-3">
+      <span>{label}</span>
+      <span className="flex items-center gap-1">
+        {keys.map((k, i) => (
+          <kbd
+            key={i}
+            className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-border-subtle bg-bg-subtle px-1 font-mono text-[10px] font-semibold text-text-secondary"
+          >
+            {k}
+          </kbd>
+        ))}
+      </span>
+    </li>
   );
 }
 

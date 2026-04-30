@@ -36,54 +36,47 @@ export const CHAT_OUTPUT_HANDLES = [
   { id: 'no_response', label: 'No Response', color: 'bg-gray-400' },
 ] as const;
 
-/** Journey canvas palette — no separate triggers (entry node is auto-placed). */
+/** Journey canvas palette — Phase 4 reduced set (10 draggable types).
+ * Triggers (Entry / Exit) are structural and not in the palette.
+ * Cut from v1: in_app, api_webhook, note, goto, update_contact, crm_sync.
+ * Existing journeys still load these kinds via the generic LogicNode renderer; they
+ * just aren't surfaced for new placement. */
 export const JOURNEY_PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
   {
-    title: 'Messaging nodes',
+    title: 'Messages',
     items: [
-      { kind: 'sms', icon: '📱', label: 'SMS', description: 'One-way SMS to the contact', group: 'Messaging' },
-      { kind: 'whatsapp_message', icon: '💬', label: 'WhatsApp', description: 'One-way WhatsApp message', group: 'Messaging' },
-      { kind: 'rcs_message', icon: '🔵', label: 'RCS', description: 'RCS rich message', group: 'Messaging' },
-      { kind: 'push', icon: '🔔', label: 'Push', description: 'Mobile or web push notification', group: 'Messaging' },
-      { kind: 'email', icon: '📧', label: 'Email', description: 'Send an email', group: 'Messaging' },
+      { kind: 'sms', icon: '📱', label: 'SMS', description: 'One-way text message', group: 'Messaging' },
+      { kind: 'whatsapp_message', icon: '💬', label: 'WhatsApp', description: 'Template message via WABA', group: 'Messaging' },
+      { kind: 'email', icon: '📧', label: 'Email', description: 'Transactional or marketing email', group: 'Messaging' },
+      { kind: 'rcs_message', icon: '🔵', label: 'RCS', description: 'Rich-card message on Android', group: 'Messaging' },
+      { kind: 'push', icon: '🔔', label: 'Push', description: 'App or browser push', group: 'Messaging' },
     ],
   },
   {
-    title: 'Agent nodes',
+    title: 'AI Agents',
     items: [
       {
         kind: 'voice_agent',
         icon: '📞',
-        label: 'AI Voice Agent',
-        description: 'Outbound AI voice call with outcome branches',
+        label: 'Voice Agent',
+        description: 'Outbound conversational call',
         group: 'Agents',
       },
       {
         kind: 'chat_agent',
         icon: '🗨',
-        label: 'AI Chat Agent',
-        description: 'Two-way chat on WhatsApp or in-app',
+        label: 'Chat Agent',
+        description: 'Inbound WhatsApp / in-app chat',
         group: 'Agents',
       },
     ],
   },
   {
-    title: 'Logic & flow',
+    title: 'Logic',
     items: [
-      { kind: 'wait', icon: '⏱', label: 'Wait', description: 'Pause for duration or until event', group: 'Logic' },
-      { kind: 'condition', icon: '⚙', label: 'Condition', description: 'Split on condition or attribute', group: 'Logic' },
-      { kind: 'ab_split', icon: '🔀', label: 'A/B Split', description: 'Random split into variants', group: 'Logic' },
-      { kind: 'api_webhook', icon: '🌐', label: 'API Call', description: 'Call external API or webhook', group: 'Logic' },
-      { kind: 'note', icon: '📝', label: 'Notes', description: 'Internal note for your team', group: 'Logic' },
-      { kind: 'exit', icon: '🚪', label: 'Exit', description: 'Remove contact from journey', group: 'Logic' },
-      { kind: 'goto', icon: '🔗', label: 'Go To', description: 'Jump to another node', group: 'Logic' },
-    ],
-  },
-  {
-    title: 'Data & integration',
-    items: [
-      { kind: 'update_contact', icon: '📊', label: 'Update Contact', description: 'Update attribute or tag', group: 'Data' },
-      { kind: 'crm_sync', icon: '🗄', label: 'CRM Sync', description: 'Push data to CRM', group: 'Data' },
+      { kind: 'wait', icon: '⏱', label: 'Wait', description: 'Pause for duration or event', group: 'Logic' },
+      { kind: 'condition', icon: '⚙', label: 'Condition', description: 'Branch on attribute or event', group: 'Logic' },
+      { kind: 'ab_split', icon: '🔀', label: 'Split', description: 'A/B/N traffic allocation', group: 'Logic' },
     ],
   },
 ];

@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, Settings, TrendingUp, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Settings, TrendingUp, MessageSquare, Clock, AlertTriangle, BookOpen, Wrench } from 'lucide-react';
 import { useAgentStore } from '@/store/agentStore';
+import { useKnowledgeBaseStore } from '@/store/knowledgeBaseStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { PerformanceMetrics } from '@/components/agents/evaluate/PerformanceMetrics';
 import { TranscriptViewer } from '@/components/agents/evaluate/TranscriptViewer';
 import { PromptEnhancement } from '@/components/agents/evaluate/PromptEnhancement';
 import { FailureAnalysis } from '@/components/agents/evaluate/FailureAnalysis';
 import { TestConsole } from '@/components/agents/evaluate/TestConsole';
+import { ALL_TOOLS } from '@/data/toolConstants';
+import { Waveform } from '@/components/ui';
 
 export function AgentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,8 +18,23 @@ export function AgentDetail() {
   const agent = useAgentStore((s) => s.getAgentById(id!));
   const pauseAgent = useAgentStore((s) => s.pauseAgent);
   const deployAgent = useAgentStore((s) => s.deployAgent);
-  
+  const knowledgeBases = useKnowledgeBaseStore((s) => s.knowledgeBases);
+
   const [activeTab, setActiveTab] = useState<'overview' | 'transcripts' | 'enhancement' | 'failures'>('overview');
+
+  // Connected resources for the header chip rows.
+  const attachedKBs = useMemo(() => {
+    if (!agent) return [];
+    const ids = (agent.config.knowledgeBases ?? []).map((a) => a.knowledgeBaseId);
+    return knowledgeBases.filter((kb) => ids.includes(kb.id));
+  }, [agent, knowledgeBases]);
+
+  const attachedTools = useMemo(() => {
+    if (!agent) return [];
+    const stepToolIds = agent.config.instructionSteps?.flatMap((s) => s.attachedToolIds ?? []) ?? [];
+    const allIds = new Set<string>([...stepToolIds, ...(agent.config.globalToolIds ?? [])]);
+    return ALL_TOOLS.filter((t) => allIds.has(t.id));
+  }, [agent]);
 
   if (!agent) {
     return (
@@ -51,23 +69,34 @@ export function AgentDetail() {
         </button>
         
         <PageHeader
-          title={config.name}
+          title={
+            <span className="inline-flex items-center gap-3">
+              {config.type === 'voice' && <Waveform seed={agent.id} />}
+              {config.name}
+              <span
+                className="rounded-full border border-border-subtle bg-surface px-2 h-5 text-[11px] font-medium text-text-secondary tabular-nums inline-flex items-center"
+                title="Configuration version"
+              >
+                v{agent.version}
+              </span>
+            </span>
+          }
           subtitle={config.description}
           actions={
             <div className="flex items-center gap-3">
               <Link
                 to={`/agents/${agent.id}/edit`}
-                className="inline-flex items-center gap-2 rounded-md border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
+                className="inline-flex items-center gap-2 rounded-md border border-border-default bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-strong"
               >
                 <Settings size={16} />
                 Edit Configuration
               </Link>
               <button
                 onClick={handleToggleStatus}
-                className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-text-on-accent transition-colors ${
                   status === 'deployed'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-600 hover:bg-green-700'
+                    ? 'bg-error hover:opacity-90'
+                    : 'bg-success hover:opacity-90'
                 }`}
                 data-testid="toggle-status-btn"
               >
@@ -86,6 +115,48 @@ export function AgentDetail() {
             </div>
           }
         />
+
+        {/* Connected resources chip rows */}
+        {(attachedKBs.length > 0 || attachedTools.length > 0) && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px]">
+            {attachedKBs.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-text-tertiary inline-flex items-center gap-1.5">
+                  <BookOpen size={12} /> Knowledge sources
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {attachedKBs.map((kb) => (
+                    <Link
+                      key={kb.id}
+                      to={`/knowledge-bases/${kb.id}`}
+                      className="rounded-full border border-border-subtle bg-surface px-2 h-6 inline-flex items-center text-text-primary hover:border-accent"
+                    >
+                      {kb.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {attachedTools.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-text-tertiary inline-flex items-center gap-1.5">
+                  <Wrench size={12} /> Tools
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {attachedTools.map((t) => (
+                    <Link
+                      key={t.id}
+                      to={`/tools?selected=${t.id}`}
+                      className="rounded-full border border-border-subtle bg-surface px-2 h-6 inline-flex items-center text-text-primary hover:border-accent"
+                    >
+                      {t.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Status and Quick Stats */}

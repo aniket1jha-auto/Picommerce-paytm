@@ -65,3 +65,14 @@ function stripTrailingZero(str: string): string {
   }
   return str;
 }
+
+/**
+ * Per-channel cost label for cost estimation rows.
+ * Voice → "₹X.XX/call", field exec → "₹X/task", everything else → "₹X.XX/msg".
+ * Consolidated from three local duplicates in campaign components.
+ */
+export function formatChannelCost(channelId: string, unitCost: number): string {
+  if (channelId === 'ai_voice') return `₹${unitCost.toFixed(2)}/call`;
+  if (channelId === 'field_executive') return `₹${unitCost.toFixed(0)}/task`;
+  return `₹${unitCost.toFixed(2)}/msg`;
+}

@@ -1,4 +1,4 @@
-import { Megaphone, Plus } from 'lucide-react';
+import { Megaphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePhaseData } from '@/hooks/usePhaseData';
@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { formatCount, formatPercent } from '@/utils/format';
 import type { ChannelType } from '@/types';
+import { dashboardChannelPerf } from '@/data/mock/dashboard';
 
 // Status sort order: active → scheduled → paused → draft → completed
 const STATUS_ORDER: Record<CampaignStatus, number> = {
@@ -26,16 +27,8 @@ function sortCampaigns(campaigns: Campaign[]): Campaign[] {
   );
 }
 
-// Compact channel performance data for sneak-peek
-const CHANNEL_PERF: { channel: ChannelType; sent: number; delivered: number; converted: number }[] = [
-  { channel: 'whatsapp', sent: 142000, delivered: 136320, converted: 9262 },
-  { channel: 'sms', sent: 98400, delivered: 95448, converted: 2066 },
-  { channel: 'ai_voice', sent: 34200, delivered: 29070, converted: 2462 },
-  { channel: 'push_notification', sent: 52800, delivered: 50160, converted: 1848 },
-  { channel: 'rcs', sent: 18600, delivered: 17670, converted: 781 },
-  { channel: 'in_app_banner', sent: 31400, delivered: 31400, converted: 1634 },
-  { channel: 'field_executive', sent: 8200, delivered: 8200, converted: 1828 },
-];
+// Channel performance sneak-peek data lives in mocks/dashboard.ts (Phase 1.8).
+const CHANNEL_PERF = dashboardChannelPerf;
 
 const CHANNEL_NAMES: Record<ChannelType, string> = {
   sms: 'SMS',
@@ -113,19 +106,8 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page header */}
-      <PageHeader
-        title="Dashboard"
-        actions={
-          <Link
-            to="/campaigns/new"
-            className="inline-flex items-center gap-1.5 rounded-md bg-cyan px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            Create Campaign
-          </Link>
-        }
-      />
+      {/* Page header — campaign creation lives in BUILD → Campaigns; not duplicated here. */}
+      <PageHeader title="Dashboard" />
 
       {/* KPI bar */}
       <KPIBar />
@@ -161,9 +143,9 @@ export function Dashboard() {
                 <EmptyState
                   icon={Megaphone}
                   title="No campaigns yet"
-                  description="Create your first campaign to start reaching your audience."
-                  ctaLabel="Create Campaign"
-                  ctaHref="/campaigns/new"
+                  description="Head to Campaigns to set up your first one and start reaching your audience."
+                  ctaLabel="Go to Campaigns"
+                  ctaHref="/campaigns"
                 />
               </div>
             )}
@@ -173,9 +155,9 @@ export function Dashboard() {
                 <EmptyState
                   icon={Megaphone}
                   title="Your audience is ready"
-                  description="2.4L users synced. Create your first campaign to start reaching them."
-                  ctaLabel="Create Campaign"
-                  ctaHref="/campaigns/new"
+                  description="2.4L users synced. Head to Campaigns to set up your first one."
+                  ctaLabel="Go to Campaigns"
+                  ctaHref="/campaigns"
                 />
               </div>
             )}
@@ -189,9 +171,9 @@ export function Dashboard() {
                 <EmptyState
                   icon={Megaphone}
                   title="No campaigns yet"
-                  description="Create your first campaign to start reaching your audience."
-                  ctaLabel="Create Campaign"
-                  ctaHref="/campaigns/new"
+                  description="Head to Campaigns to set up your first one."
+                  ctaLabel="Go to Campaigns"
+                  ctaHref="/campaigns"
                 />
               </div>
             )}

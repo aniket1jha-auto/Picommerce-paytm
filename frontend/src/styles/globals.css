@@ -1,42 +1,295 @@
 @import "tailwindcss";
+@import "./tokens.css";
+
+/* ──────────────────────────────────────────────────────────────────────
+ * globals.css — bridges tokens.css into Tailwind v4 utility classes.
+ *
+ * Phase 1.5 colour-system correction. The accent (violet) scale is gone.
+ * In its place: --brand-* (deep navy) and --blue-* (Paytm bright blue),
+ * with distinct roles (see tokens.css header for the discipline rules).
+ *
+ * Legacy `--color-accent-*` Tailwind utility names are preserved as
+ * aliases pointing at --brand-*, so feature components that still
+ * reference `bg-accent`/`text-accent`/`bg-accent-soft`/etc. compile
+ * unchanged but render in navy. Primitives have been migrated to
+ * `bg-brand-*` directly (see Phase 1.5 §5.3).
+ * ────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  --color-cyan: #00BAF2;
-  --color-navy: #002970;
-  --color-bg-primary: #F7F9FC;
-  --color-bg-secondary: #FFFFFF;
-  --color-text-primary: #1A1A2E;
-  --color-text-secondary: #6B7280;
-  --color-success: #27AE60;
-  --color-warning: #F2994A;
-  --color-error: #EB5757;
-  --color-ai-bg: rgba(0, 186, 242, 0.08);
-  --font-family-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* ─── Surfaces ──────────────────────────────────────────────────── */
+
+  --color-canvas:         var(--bg-canvas);
+  --color-surface:        var(--bg-surface);
+  --color-surface-raised: var(--bg-surface-raised);
+  --color-subtle:         var(--bg-subtle);
+  --color-muted:          var(--bg-muted);
+  /* Legacy alias — pre-Phase-1 surfaces. */
+  --color-surface-sunken: var(--bg-subtle);
+
+  /* ─── Borders ───────────────────────────────────────────────────── */
+
+  --color-border-subtle:  var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong:  var(--border-strong);
+
+  /* ─── Text ──────────────────────────────────────────────────────── */
+
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary:  var(--text-tertiary);
+  --color-text-disabled:  var(--text-disabled);
+  --color-text-inverse:   var(--text-inverse);
+  --color-text-on-accent: var(--text-inverse);
+  --color-text-mono:      var(--text-secondary);
+
+  /* ─── Brand · navy scale (50-900) ───────────────────────────────── */
+  /* Use `bg-brand-500`, `text-brand-700`, `border-brand-200`, etc.
+     `bg-brand` (bare) → 500 via legacy alias. */
+
+  --color-brand-50:  var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand:     var(--brand-500);
+
+  /* ─── Blue · Paytm bright scale (50-900) ────────────────────────── */
+  /* Note: this overrides Tailwind's default `--color-blue-*` palette
+     so `bg-blue-500` resolves to Paytm cyan-blue (#00BAF2) — intentional. */
+
+  --color-blue-50:  var(--blue-50);
+  --color-blue-100: var(--blue-100);
+  --color-blue-200: var(--blue-200);
+  --color-blue-300: var(--blue-300);
+  --color-blue-400: var(--blue-400);
+  --color-blue-500: var(--blue-500);
+  --color-blue-600: var(--blue-600);
+  --color-blue-700: var(--blue-700);
+  --color-blue-800: var(--blue-800);
+  --color-blue-900: var(--blue-900);
+
+  /* ─── Legacy aliases · accent → brand ───────────────────────────── */
+  /* Existing feature code uses `bg-accent`, `text-accent`,
+     `bg-accent-soft`, `border-accent`, `bg-accent-hover`,
+     `bg-accent-pressed`. Map them at the bridge layer so the rendered
+     colour shifts to navy without code changes. Primitives have been
+     migrated explicitly to `bg-brand-*`. */
+
+  --color-accent:         var(--brand-500);
+  --color-accent-hover:   var(--brand-600);
+  --color-accent-pressed: var(--brand-700);
+  --color-accent-soft:    var(--brand-50);
+
+  /* Per Phase 1.5 §3 role table:
+       Live/voice indicators → bright blue
+       AI-touched surfaces   → bright-blue family at 5–10% opacity */
+  --color-accent-live:      var(--blue-500);
+  --color-accent-live-soft: var(--blue-50);
+
+  /* Pre-Phase-1 secondary accent colour. Kept as-is (warm orange) —
+     no longer recommended for new code. */
+  --color-accent-warm:      #FF8A3D;
+  --color-accent-warm-soft: rgba(255, 138, 61, 0.10);
+
+  /* Per-step accent backgrounds used by some pages. */
+  --color-accent-50:  var(--brand-50);
+  --color-accent-100: var(--brand-100);
+  --color-accent-200: var(--brand-200);
+  --color-accent-300: var(--brand-300);
+  --color-accent-400: var(--brand-400);
+  --color-accent-500: var(--brand-500);
+  --color-accent-600: var(--brand-600);
+  --color-accent-700: var(--brand-700);
+  --color-accent-800: var(--brand-800);
+  --color-accent-900: var(--brand-900);
+
+  /* ─── Semantic status · full bg/border/text/solid ───────────────── */
+
+  --color-success-bg:     var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-success-text:   var(--success-text);
+  --color-success-solid:  var(--success-solid);
+
+  --color-warning-bg:     var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-warning-text:   var(--warning-text);
+  --color-warning-solid:  var(--warning-solid);
+
+  --color-danger-bg:      var(--danger-bg);
+  --color-danger-border:  var(--danger-border);
+  --color-danger-text:    var(--danger-text);
+  --color-danger-solid:   var(--danger-solid);
+
+  --color-info-bg:        var(--info-bg);
+  --color-info-border:    var(--info-border);
+  --color-info-text:      var(--info-text);
+  --color-info-solid:     var(--info-solid);
+
+  /* Legacy single-name semantic aliases. */
+  --color-success:      var(--success-solid);
+  --color-success-soft: var(--success-bg);
+  --color-warning:      var(--warning-solid);
+  --color-warning-soft: var(--warning-bg);
+  --color-error:        var(--danger-solid);
+  --color-error-soft:   var(--danger-bg);
+  --color-info:         var(--info-solid);
+  --color-info-soft:    var(--info-bg);
+  --color-neutral:      var(--text-tertiary);
+  --color-neutral-soft: var(--bg-subtle);
+
+  /* ─── Charts ────────────────────────────────────────────────────── */
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  /* ─── Channel hues ─────────────────────────────────────────────── */
+  /* Each channel keeps its established brand colour. The system
+     anchor change does NOT alter channel colours (they're brand-
+     controlled outside our system per the Phase 1.5 §3 role table).
+     The two values that *did* shift: AI Voice → Paytm blue (was
+     violet); SMS stays semantic green. */
+
+  --color-ch-sms:       var(--success-solid);
+  --color-ch-whatsapp:  #25D366;
+  --color-ch-rcs:       var(--brand-500);
+  --color-ch-aivoice:   var(--blue-500);
+  --color-ch-fieldexec: var(--warning-solid);
+  --color-ch-push:      #FF8A3D;
+  --color-ch-inapp:     #14B8A6;
+
+  /* ─── Pre-Phase-1 misc (kept to avoid build breakage) ──────────── */
+
+  --color-cyan:         var(--blue-500);
+  --color-navy:         var(--brand-700);
+  --color-bg-primary:   var(--bg-canvas);
+  --color-bg-secondary: var(--bg-surface);
+  --color-ai-bg:        var(--blue-50);
+
+  /* ─── Type · families ──────────────────────────────────────────── */
+
+  --font-family-sans:    var(--font-ui);
+  --font-family-display: var(--font-display);
+  --font-family-mono:    var(--font-mono);
+
+  /* ─── Type · scale ─────────────────────────────────────────────── */
+
+  --text-xs:                0.75rem;
+  --text-xs--line-height:   1.1;
+  --text-sm:                0.875rem;
+  --text-sm--line-height:   1.4;
+  --text-base:              1rem;
+  --text-base--line-height: 1.5;
+  --text-md:                1.125rem;
+  --text-md--line-height:   1.4;
+  --text-lg:                1.25rem;
+  --text-lg--line-height:   1.3;
+  --text-xl:                1.5rem;
+  --text-xl--line-height:   1.25;
+  --text-2xl:               1.875rem;
+  --text-2xl--line-height:  1.2;
+  --text-3xl:               2.25rem;
+  --text-3xl--line-height:  1.15;
+  --text-4xl:               3rem;
+  --text-4xl--line-height:  1.1;
+
+  /* ─── Radius ───────────────────────────────────────────────────── */
+
+  --radius-xs:   var(--radius-xs);
+  --radius-sm:   var(--radius-sm);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-2xl:  var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  /* ─── Shadows ──────────────────────────────────────────────────── */
+
+  --shadow-xs:    var(--shadow-xs);
+  --shadow-sm:    var(--shadow-sm);
+  --shadow-md:    var(--shadow-md);
+  --shadow-lg:    var(--shadow-lg);
+  --shadow-xl:    var(--shadow-xl);
+  --shadow-focus: var(--shadow-focus);
+
+  /* Legacy shadow names. */
+  --shadow-card:        var(--shadow-xs);
+  --shadow-popover:     var(--shadow-lg);
+  --shadow-modal:       var(--shadow-xl);
+  --shadow-glow-accent: var(--shadow-focus);
 }
 
-body {
-  font-family: var(--font-family-sans);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+/* ─── Base ─────────────────────────────────────────────────────────── */
+
+html, body {
+  font-family: var(--font-ui);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
 }
 
-/* Scrollbar styling */
+.tabular-nums {
+  font-feature-settings: "tnum" 1;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+  background: var(--border-default);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+/* ─── Focus ring ──────────────────────────────────────────────────── */
+/* Bright Paytm blue at 25% — pops against navy primary buttons. */
+
+:where(button, a, input, select, textarea, [role="button"], [role="tab"]):focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Journey canvas — animated active edge ───────────────────────── */
+/* Used by JourneyBezierEdge when an edge connects to/from the selected
+ * node. Disabled by reduced-motion (declared in tokens.css). */
+
+@keyframes journey-edge-flow {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge-path {
+    animation: none !important;
+  }
 }

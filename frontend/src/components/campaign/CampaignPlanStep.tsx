@@ -23,6 +23,7 @@ import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { Toast } from '@/components/common/Toast';
 import { channels as ALL_CHANNELS, PLATFORM_REACHABILITY_RATES } from '@/data/channels';
 import { usePhaseData } from '@/hooks/usePhaseData';
+import { formatINR } from '@/utils/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,17 +88,10 @@ const RESPONSE_RATE_BY_DURATION: Record<string, number> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatINR(amount: number): string {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount.toFixed(0)}`;
-}
-
-function formatINRCompact(amount: number): string {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount.toFixed(0)}`;
-}
+// formatINR consolidated to @/utils/format (Phase 1.7).
+// formatINRCompact and formatINR were near-identical; standardized on the
+// shared utility's precision (.toFixed(1) with stripTrailingZero).
+const formatINRCompact = formatINR;
 
 function getChannelColor(channelId: ChannelType): string {
   const ch = ALL_CHANNELS.find((c) => c.id === channelId);

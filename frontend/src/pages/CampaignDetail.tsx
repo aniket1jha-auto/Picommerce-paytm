@@ -22,15 +22,19 @@ import {
   ChevronRight,
   CheckCircle2,
   TriangleAlert,
+  Bot,
+  ExternalLink,
 } from 'lucide-react';
 import { usePhaseData } from '@/hooks/usePhaseData';
+import { useAgentStore } from '@/store/agentStore';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { EmptyState } from '@/components/common/EmptyState';
 
 import { Toast } from '@/components/common/Toast';
+import { Waveform } from '@/components/ui';
 import { formatINR, formatCount, formatPercent, formatROI } from '@/utils/format';
-import type { ChannelType } from '@/types';
+import type { Campaign, ChannelType } from '@/types';
 
 // ─── Demo Data Types ─────────────────────────────────────────────────────────
 
@@ -597,6 +601,7 @@ export function CampaignDetail() {
                 ))}
               </span>
             </div>
+            <AttachedAgentChip campaign={campaign} />
           </div>
 
           {/* Right: action buttons */}
@@ -1590,3 +1595,27 @@ function channelLabel(ch: ChannelType): string {
 
 // suppress unused import warnings — roiColorClass is used in sub-segment row
 void roiColorClass;
+
+/**
+ * Cross-section link to the voice agent attached to this campaign — Phase 3.12.
+ * Surfaces aiVoiceConfig.agentId as a chip with the agent's identity and a
+ * link to the agent detail page.
+ */
+function AttachedAgentChip({ campaign }: { campaign: Campaign }) {
+  const cfg = campaign.aiVoiceConfig;
+  const agent = useAgentStore((s) => (cfg?.agentId ? s.getAgentById(cfg.agentId) : undefined));
+  if (!cfg || !agent) return null;
+  return (
+    <Link
+      to={`/agents/${agent.id}`}
+      className="mt-1 inline-flex items-center gap-2 self-start rounded-md border border-border-subtle bg-surface-raised px-2.5 h-7 text-[12px] text-text-primary hover:border-accent transition-colors"
+      title="Open agent"
+    >
+      <Bot size={12} className="text-accent" />
+      <Waveform seed={agent.id} bars={3} height={9} />
+      <span className="font-medium">{agent.config.name}</span>
+      <span className="text-text-tertiary tabular-nums">v{agent.version}</span>
+      <ExternalLink size={11} className="text-text-tertiary" />
+    </Link>
+  );
+}

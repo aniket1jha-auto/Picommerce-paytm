@@ -7,6 +7,7 @@ import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { InlineInsight } from '@/components/ai/InlineInsight';
 import { useInsights } from '@/hooks/useInsights';
 import { usePhaseData } from '@/hooks/usePhaseData';
+import { formatINR, formatChannelCost } from '@/utils/format';
 
 interface ChannelSelectorProps {
   selectedChannels: ChannelType[];
@@ -27,22 +28,6 @@ const HISTORICAL_CONVERSION: Record<ChannelType, { rate: string; label: string }
   facebook_ads: { rate: '1.8%', label: 'avg CTR' },
   instagram_ads: { rate: '2.4%', label: 'avg CTR' },
 };
-
-function getChannelCostLabel(channelId: ChannelType, unitCost: number): string {
-  if (channelId === 'ai_voice') return `₹${unitCost.toFixed(2)}/call`;
-  if (channelId === 'field_executive') return `₹${unitCost.toFixed(0)}/task`;
-  return `₹${unitCost.toFixed(2)}/msg`;
-}
-
-function formatINR(amount: number): string {
-  if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(2)}L`;
-  }
-  if (amount >= 1000) {
-    return `₹${(amount / 1000).toFixed(1)}K`;
-  }
-  return `₹${amount.toFixed(0)}`;
-}
 
 export function ChannelSelector({ selectedChannels, onUpdate, segmentSize, segmentReachability }: ChannelSelectorProps) {
   const insights = useInsights('channel_step');
@@ -129,7 +114,7 @@ export function ChannelSelector({ selectedChannels, onUpdate, segmentSize, segme
                   {ch.name}
                 </span>
                 <span className="text-xs text-text-secondary">
-                  {getChannelCostLabel(ch.id, unitCost)}
+                  {formatChannelCost(ch.id, unitCost)}
                 </span>
               </div>
 
@@ -176,7 +161,7 @@ export function ChannelSelector({ selectedChannels, onUpdate, segmentSize, segme
                     <ChannelIcon channel={ch.id} size={14} />
                     <span className="text-sm text-text-primary">{ch.name}</span>
                     <span className="text-xs text-text-secondary">
-                      {getChannelCostLabel(ch.id, ch.unitCost)} × {segmentSize.toLocaleString('en-IN')}
+                      {formatChannelCost(ch.id, ch.unitCost)} × {segmentSize.toLocaleString('en-IN')}
                     </span>
                   </div>
                   <span className="text-sm font-semibold text-text-primary">

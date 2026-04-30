@@ -582,7 +582,7 @@ export function Audiences() {
                     isDay30={isDay30}
                     isNew={newSegmentIds.has(segment.id)}
                     highlight={flashSegmentId === segment.id}
-                    onEdit={() => setToast('Segment editor coming soon')}
+                    onEdit={() => setToast('Segment editor lands in Phase 3')}
                     onClone={() => cloneSegment(segment)}
                   />
                 ))}

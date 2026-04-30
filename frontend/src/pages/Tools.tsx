@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Plus,
   Search,
   Wrench,
   PhoneOff,
@@ -14,15 +14,22 @@ import {
   Hash,
   Webhook,
   Sheet,
-  Database,
-  MessageCircle,
   Settings,
-  Trash2,
+  MessageCircle,
   Info,
+  Lock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { TOOL_CATEGORIES, ALL_TOOLS } from '@/data/toolConstants';
 import type { ToolDefinition } from '@/types/tool';
+import { useAgentStore } from '@/store/agentStore';
+import {
+  Input,
+  Textarea,
+  Select,
+  EmptyState,
+  cn,
+} from '@/components/ui';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Wrench,
@@ -44,20 +51,54 @@ function ToolIcon({ icon, color, size = 20 }: { icon: string; color: string; siz
   const Icon = ICON_MAP[icon] || Wrench;
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-lg"
-      style={{ backgroundColor: `${color}15`, width: size + 16, height: size + 16 }}
+      className="flex shrink-0 items-center justify-center rounded-md"
+      style={{ backgroundColor: `${color}1F`, width: size + 14, height: size + 14 }}
     >
       <Icon size={size} style={{ color }} />
     </div>
   );
 }
 
+/* ─── Reverse linkage: which agents reference each tool ────────────────── */
+
+function useAgentsByToolId(): Record<string, { id: string; name: string }[]> {
+  const agents = useAgentStore((s) => s.agents);
+  return useMemo(() => {
+    const out: Record<string, { id: string; name: string }[]> = {};
+    for (const a of agents) {
+      const stepIds = a.config.instructionSteps?.flatMap((s) => s.attachedToolIds ?? []) ?? [];
+      const ids = new Set<string>([
+        ...stepIds,
+        ...(a.config.globalToolIds ?? []),
+        ...(a.config.builtInTools ?? []),
+      ]);
+      for (const tid of ids) {
+        (out[tid] ??= []).push({ id: a.id, name: a.config.name });
+      }
+    }
+    // Dedupe by agent id (an agent attaching the same tool twice should count once).
+    for (const tid of Object.keys(out)) {
+      const seen = new Set<string>();
+      out[tid] = out[tid].filter((a) => {
+        if (seen.has(a.id)) return false;
+        seen.add(a.id);
+        return true;
+      });
+    }
+    return out;
+  }, [agents]);
+}
+
+/* ─── Left panel: tool list with reverse-linkage counts ────────────────── */
+
 function ToolListPanel({
   selectedTool,
   onSelect,
+  usageById,
 }: {
   selectedTool: ToolDefinition | null;
   onSelect: (tool: ToolDefinition) => void;
+  usageById: Record<string, { id: string; name: string }[]>;
 }) {
   const [search, setSearch] = useState('');
 
@@ -67,70 +108,85 @@ function ToolListPanel({
     return TOOL_CATEGORIES.map((cat) => ({
       ...cat,
       items: cat.items.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q)
+        (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
       ),
     })).filter((cat) => cat.items.length > 0);
   }, [search]);
 
   return (
-    <div className="flex flex-col h-full border-r border-[#E5E7EB]">
-      {/* Header */}
-      <div className="p-4 border-b border-[#E5E7EB]">
+    <div className="flex flex-col h-full border-r border-border-subtle bg-surface">
+      {/* Create tool — disabled in v1, honest copy */}
+      <div className="p-3 border-b border-border-subtle">
         <button
-          className="w-full inline-flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#E5E7EB] px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-cyan hover:text-cyan"
-          data-testid="create-tool-btn"
+          type="button"
+          disabled
+          title="Custom tool creation lands in Phase 5"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-dashed border-border-default px-3 py-2 text-[12px] font-medium text-text-tertiary cursor-not-allowed"
         >
-          <Plus size={16} />
-          Create Tool
+          <Lock size={12} />
+          Custom tool — coming Phase 5
         </button>
       </div>
 
       {/* Search */}
-      <div className="px-4 py-3">
+      <div className="px-3 py-2.5">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-          <input
-            type="text"
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+          <Input
+            placeholder="Search tools…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tools..."
-            className="w-full rounded-lg border border-[#E5E7EB] pl-9 pr-3 py-2 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-            data-testid="tools-search-input"
+            className="pl-8"
           />
         </div>
       </div>
 
-      {/* Tool List */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
+      <div className="flex-1 overflow-y-auto px-2 pb-3">
         {filteredCategories.map((category) => (
-          <div key={category.id} className="mb-4">
-            <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
+          <div key={category.id} className="mb-3">
+            <div className="px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.10em] text-text-tertiary">
               {category.label}
             </div>
             <div className="flex flex-col gap-0.5">
-              {category.items.map((tool) => (
-                <button
-                  key={tool.id}
-                  onClick={() => onSelect(tool)}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left transition-all ${
-                    selectedTool?.id === tool.id
-                      ? 'bg-cyan/10 ring-1 ring-cyan/30'
-                      : 'hover:bg-gray-50'
-                  }`}
-                  data-testid={`tool-item-${tool.id}`}
-                >
-                  <ToolIcon icon={tool.icon} color={tool.color} size={18} />
-                  <span
-                    className={`text-sm font-medium ${
-                      selectedTool?.id === tool.id ? 'text-cyan' : 'text-text-primary'
-                    }`}
+              {category.items.map((tool) => {
+                const usedBy = usageById[tool.id]?.length ?? 0;
+                const isActive = selectedTool?.id === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => onSelect(tool)}
+                    className={cn(
+                      'group flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 text-left transition-colors',
+                      isActive
+                        ? 'bg-accent-soft text-text-primary'
+                        : 'hover:bg-surface-raised',
+                    )}
                   >
-                    {tool.name}
-                  </span>
-                </button>
-              ))}
+                    <ToolIcon icon={tool.icon} color={tool.color} size={14} />
+                    <span
+                      className={cn(
+                        'flex-1 text-[13px] truncate',
+                        isActive ? 'font-medium' : 'text-text-primary',
+                      )}
+                    >
+                      {tool.name}
+                    </span>
+                    {usedBy > 0 && (
+                      <span
+                        className={cn(
+                          'text-[10px] tabular-nums px-1.5 h-4 rounded-full inline-flex items-center',
+                          isActive
+                            ? 'bg-surface text-text-secondary'
+                            : 'bg-surface-raised text-text-tertiary',
+                        )}
+                        title={`Used by ${usedBy} agent${usedBy === 1 ? '' : 's'}`}
+                      >
+                        {usedBy}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -139,360 +195,282 @@ function ToolListPanel({
   );
 }
 
-function ToolConfigPanel({ tool }: { tool: ToolDefinition }) {
+/* ─── Right panel: tool details + agents-using-this-tool ───────────────── */
+
+function ToolConfigPanel({
+  tool,
+  usingAgents,
+}: {
+  tool: ToolDefinition;
+  usingAgents: { id: string; name: string }[];
+}) {
   const [name, setName] = useState(`${tool.name.toLowerCase().replace(/\s+/g, '_')}_tool`);
   const [description, setDescription] = useState('');
 
+  // Reset local state when tool selection changes
+  useEffect(() => {
+    setName(`${tool.name.toLowerCase().replace(/\s+/g, '_')}_tool`);
+    setDescription('');
+  }, [tool.id]);
+
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-canvas">
       {/* Tool Header */}
-      <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
-        <div className="flex items-center gap-3">
-          <ToolIcon icon={tool.icon} color={tool.color} size={22} />
-          <div>
+      <div className="flex items-start justify-between gap-3 border-b border-border-subtle bg-surface px-6 py-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <ToolIcon icon={tool.icon} color={tool.color} size={20} />
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-text-primary">{name}</h2>
+              <h2 className="text-[16px] font-semibold text-text-primary truncate">{tool.name}</h2>
               <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ backgroundColor: `${tool.color}15`, color: tool.color }}
+                className="rounded-full px-2 h-5 text-[10px] font-medium inline-flex items-center"
+                style={{ backgroundColor: `${tool.color}1F`, color: tool.color }}
               >
-                {tool.name.toLowerCase()}
+                {tool.id}
               </span>
             </div>
-            <p className="text-xs text-text-secondary mt-0.5">
-              {tool.id}_f7a2b3c1-8e4d-4a5b-9c6e...
-            </p>
+            <p className="text-[12px] text-text-secondary mt-0.5">{tool.description}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="inline-flex items-center gap-2 rounded-md border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
-            data-testid="tool-code-btn"
-          >
-            {'</>'}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
-            data-testid="tool-save-btn"
-          >
-            Saved
-          </button>
         </div>
       </div>
 
-      {/* Config Sections */}
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-5">
+        {/* Used by — reverse linkage */}
+        <Section
+          icon={UserCheck}
+          title="Used by agents"
+          subtitle="Agents that have this tool attached at a step or globally."
+        >
+          {usingAgents.length === 0 ? (
+            <p className="text-[13px] text-text-secondary px-1">
+              No agents currently use this tool.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {usingAgents.map((a) => (
+                <Link
+                  key={a.id}
+                  to={`/agents/${a.id}`}
+                  className="rounded-full border border-border-subtle bg-surface px-2.5 h-6 inline-flex items-center text-[12px] text-text-primary hover:border-accent"
+                >
+                  {a.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </Section>
+
         {/* Tool Settings */}
-        <div className="rounded-lg ring-1 ring-[#E5E7EB] overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 bg-gray-50 border-b border-[#E5E7EB]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white ring-1 ring-[#E5E7EB]">
-              <Settings size={16} className="text-text-secondary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">Tool Settings</h3>
-              <p className="text-xs text-text-secondary">Configure the basic settings for this tool</p>
-            </div>
-          </div>
-          <div className="p-5 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">
-                Tool Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                data-testid="tool-name-input"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-text-primary">Description</label>
-                <span className="text-xs text-text-secondary">{description.length}/1000</span>
+        <Section icon={Settings} title="Tool Settings" subtitle="Configure how agents invoke this tool.">
+          <div className="space-y-3">
+            <Input label="Tool Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium text-text-secondary">Description</span>
+                <span className="text-[11px] text-text-tertiary">{description.length}/1000</span>
               </div>
-              <textarea
+              <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
-                placeholder="Describe the tool in a few sentences"
+                placeholder="Describe what this tool does, in language an LLM can use to choose when to call it."
                 rows={3}
-                className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                data-testid="tool-description-input"
               />
             </div>
 
-            {/* Tool-specific settings */}
+            {/* Tool-specific fields */}
             {tool.id === 'api_request' && (
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Endpoint URL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://api.example.com/endpoint"
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    HTTP Method
-                  </label>
-                  <select className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20">
-                    <option>GET</option>
-                    <option>POST</option>
-                    <option>PUT</option>
-                    <option>DELETE</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Headers (JSON)
-                  </label>
-                  <textarea
+              <div className="space-y-3 pt-1">
+                <Input label="Endpoint URL" placeholder="https://api.example.com/endpoint" />
+                <Select label="HTTP Method" defaultValue="GET">
+                  <option>GET</option>
+                  <option>POST</option>
+                  <option>PUT</option>
+                  <option>DELETE</option>
+                </Select>
+                <div className="space-y-1">
+                  <span className="text-[12px] font-medium text-text-secondary">Headers (JSON)</span>
+                  <Textarea
                     placeholder='{"Authorization": "Bearer ...", "Content-Type": "application/json"}'
                     rows={3}
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm font-mono focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
+                    className="font-mono text-[12px]"
                   />
                 </div>
               </div>
             )}
 
             {tool.id === 'transfer_call' && (
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Transfer To (Phone Number)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="+1 (555) 123-4567"
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Transfer Mode
-                  </label>
-                  <select className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20">
-                    <option>Warm Transfer</option>
-                    <option>Cold Transfer</option>
-                    <option>Blind Transfer</option>
-                  </select>
-                </div>
+              <div className="space-y-3 pt-1">
+                <Input label="Transfer To (phone)" placeholder="+91 80XXXXXXXX" />
+                <Select label="Transfer Mode" defaultValue="warm">
+                  <option value="warm">Warm Transfer</option>
+                  <option value="cold">Cold Transfer</option>
+                  <option value="blind">Blind Transfer</option>
+                </Select>
               </div>
             )}
 
             {tool.id === 'end_call' && (
-              <div className="pt-2">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="h-4 w-4 rounded border-gray-300 text-cyan focus:ring-cyan"
-                  />
-                  <span className="text-sm text-text-primary">
-                    Play farewell message before ending
-                  </span>
-                </label>
-              </div>
+              <label className="inline-flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="h-4 w-4 rounded border-border-default text-accent focus:ring-accent"
+                />
+                <span className="text-[13px] text-text-primary">Play farewell message before ending</span>
+              </label>
             )}
 
             {tool.id === 'send_text' && (
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Message Template
-                  </label>
-                  <textarea
-                    placeholder="Hi {{name}}, thanks for speaking with us! Here's the summary: {{summary}}"
-                    rows={3}
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                  />
-                  <p className="text-xs text-text-secondary mt-1">
-                    Use {'{{variable}}'} for dynamic content
-                  </p>
-                </div>
+              <div className="space-y-1 pt-1">
+                <span className="text-[12px] font-medium text-text-secondary">Message Template</span>
+                <Textarea
+                  placeholder="Hi {{name}}, thanks for speaking with us! Here's the summary: {{summary}}"
+                  rows={3}
+                />
+                <p className="text-[11px] text-text-tertiary">
+                  Use {'{{variable}}'} for dynamic content.
+                </p>
               </div>
             )}
 
             {tool.id === 'custom_tool' && (
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    Server URL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://your-server.com/tool-handler"
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1.5">
+              <div className="space-y-3 pt-1">
+                <Input label="Server URL" placeholder="https://your-server.com/tool-handler" />
+                <div className="space-y-1">
+                  <span className="text-[12px] font-medium text-text-secondary">
                     Parameters Schema (JSON)
-                  </label>
-                  <textarea
+                  </span>
+                  <Textarea
                     placeholder='{"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}'
                     rows={4}
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm font-mono focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/20"
+                    className="font-mono text-[12px]"
                   />
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </Section>
 
-        {/* Knowledge Bases */}
-        <div className="rounded-lg ring-1 ring-[#E5E7EB] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b border-[#E5E7EB]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white ring-1 ring-[#E5E7EB]">
-                <Database size={16} className="text-text-secondary" />
+        {/* Spoken messages — read-only reference for v1 */}
+        <Section
+          icon={MessageCircle}
+          title="Spoken messages"
+          subtitle="What the voice agent says before, after, and on error. Editable in Phase 5."
+        >
+          <div className="grid gap-2">
+            {SPOKEN_MESSAGE_PRESETS.map((m) => (
+              <div
+                key={m.stage}
+                className="rounded-md border border-border-subtle bg-surface px-3 py-2.5"
+              >
+                <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-tertiary">
+                  {m.stage} · {m.hint}
+                </div>
+                <p className="mt-1 text-[13px] text-text-primary">{m.text}</p>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">Knowledge Bases</h3>
-                <p className="text-xs text-text-secondary">Configure knowledge bases for this tool</p>
-              </div>
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan hover:text-cyan/80"
-              data-testid="add-kb-btn"
-            >
-              <Plus size={14} />
-              Add Knowledge Base
-            </button>
+            ))}
           </div>
-          <div className="p-8 text-center">
-            <div className="flex justify-center mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                <Database size={24} className="text-text-secondary" />
-              </div>
-            </div>
-            <p className="text-sm text-text-secondary mb-1">No knowledge bases configured</p>
-            <p className="text-xs text-text-secondary">
-              Click "Add Knowledge Base" to add one
-            </p>
-          </div>
-        </div>
+        </Section>
 
-        {/* Messages */}
-        <div className="rounded-lg ring-1 ring-[#E5E7EB] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b border-[#E5E7EB]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white ring-1 ring-[#E5E7EB]">
-                <MessageCircle size={16} className="text-text-secondary" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">Messages</h3>
-                <p className="text-xs text-text-secondary">Configure messages spoken during tool execution</p>
-              </div>
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan hover:text-cyan/80"
-              data-testid="add-message-btn"
-            >
-              <Plus size={14} />
-              Add Message
-            </button>
-          </div>
-          <div className="p-5 space-y-3">
-            <div className="rounded-lg bg-cyan/5 border border-cyan/20 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium bg-cyan/10 text-cyan px-2 py-0.5 rounded">Before</span>
-                  <span className="text-xs text-text-secondary">Spoken before execution</span>
-                </div>
-                <button className="text-text-secondary hover:text-red-500">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <p className="text-sm text-text-primary">
-                "Let me look that up for you, one moment please."
-              </p>
-            </div>
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded">After</span>
-                  <span className="text-xs text-text-secondary">Spoken after success</span>
-                </div>
-                <button className="text-text-secondary hover:text-red-500">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <p className="text-sm text-text-primary">
-                "I've found the information you need."
-              </p>
-            </div>
-            <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">Error</span>
-                  <span className="text-xs text-text-secondary">Spoken on failure</span>
-                </div>
-                <button className="text-text-secondary hover:text-red-500">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <p className="text-sm text-text-primary">
-                "I'm having trouble finding that right now. Let me try another way."
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Info box */}
-        <div className="flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 p-4">
-          <Info size={18} className="text-blue-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-blue-900 mb-1">How tools work</p>
-            <p className="text-xs text-blue-800">
-              Tools are functions your agent can call during a conversation. When the agent recognizes
-              it needs to perform an action (like looking up data or transferring a call), it invokes
-              the appropriate tool. Messages are spoken to keep the user informed during execution.
-            </p>
-          </div>
+        {/* Info */}
+        <div className="flex items-start gap-3 rounded-md border border-info-soft bg-info-soft p-3">
+          <Info size={16} className="text-info mt-0.5 shrink-0" />
+          <p className="text-[12px] text-text-primary leading-5">
+            Tools are functions an agent can call during a conversation. The agent decides when to
+            invoke them based on context. Knowledge bases attach to <em>agents</em>, not tools — see{' '}
+            <Link to="/knowledge-bases" className="text-info hover:underline">
+              Knowledge Bases
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
+const SPOKEN_MESSAGE_PRESETS: Array<{ stage: 'Before' | 'After' | 'Error'; hint: string; text: string }> = [
+  { stage: 'Before', hint: 'Spoken while the tool is running', text: 'Let me look that up for you, one moment please.' },
+  { stage: 'After', hint: 'Spoken on success', text: "I've found the information you need." },
+  { stage: 'Error', hint: 'Spoken on failure', text: "I'm having trouble pulling that up right now. Let me try another way." },
+];
+
+function Section({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-border-subtle bg-surface overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border-subtle bg-surface-sunken">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-surface ring-1 ring-border-subtle">
+          <Icon size={14} className="text-text-secondary" />
+        </div>
+        <div>
+          <div className="text-[13px] font-semibold text-text-primary">{title}</div>
+          {subtitle && <div className="text-[11px] text-text-tertiary">{subtitle}</div>}
+        </div>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+/* ─── Empty selection state ────────────────────────────────────────────── */
 
 function EmptyToolState() {
   return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center max-w-sm">
-        <div className="flex justify-center mb-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-            <Wrench size={32} className="text-text-secondary" />
-          </div>
-        </div>
-        <h3 className="text-lg font-semibold text-text-primary mb-2">Select a tool</h3>
-        <p className="text-sm text-text-secondary">
-          Choose a tool from the list to configure it, or create a new custom tool.
-        </p>
-      </div>
+    <div className="flex-1 flex items-center justify-center bg-canvas">
+      <EmptyState
+        icon={Wrench}
+        title="Select a tool"
+        body="Choose a tool from the list to see its config and which agents use it."
+      />
     </div>
   );
 }
 
+/* ─── Page shell ───────────────────────────────────────────────────────── */
+
 export function Tools() {
-  const [selectedTool, setSelectedTool] = useState<ToolDefinition | null>(ALL_TOOLS[0]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedId = searchParams.get('selected');
+  const initialTool = useMemo(
+    () => ALL_TOOLS.find((t) => t.id === requestedId) ?? ALL_TOOLS[0] ?? null,
+    [requestedId],
+  );
+  const [selectedTool, setSelectedTool] = useState<ToolDefinition | null>(initialTool);
+
+  // Sync URL when selection changes (so the deep link from AgentDetail stays accurate)
+  useEffect(() => {
+    if (!selectedTool) return;
+    if (searchParams.get('selected') !== selectedTool.id) {
+      const next = new URLSearchParams(searchParams);
+      next.set('selected', selectedTool.id);
+      setSearchParams(next, { replace: true });
+    }
+  }, [selectedTool, searchParams, setSearchParams]);
+
+  const usageById = useAgentsByToolId();
+  const usingAgents = selectedTool ? usageById[selectedTool.id] ?? [] : [];
 
   return (
-    <div className="flex h-[calc(100vh-40px)] -mx-8 -my-5 bg-white">
-      {/* Left Panel: Tool List */}
+    <div className="flex h-[calc(100vh-40px)] -mx-8 -my-5 bg-canvas">
       <div className="w-[280px] shrink-0">
-        <ToolListPanel selectedTool={selectedTool} onSelect={setSelectedTool} />
+        <ToolListPanel selectedTool={selectedTool} onSelect={setSelectedTool} usageById={usageById} />
       </div>
-
-      {/* Right Panel: Tool Configuration */}
       {selectedTool ? (
-        <ToolConfigPanel key={selectedTool.id} tool={selectedTool} />
+        <ToolConfigPanel key={selectedTool.id} tool={selectedTool} usingAgents={usingAgents} />
       ) : (
         <EmptyToolState />
       )}
     </div>
   );
 }
+
