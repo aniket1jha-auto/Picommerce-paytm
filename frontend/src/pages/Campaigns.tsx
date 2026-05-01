@@ -8,6 +8,7 @@ import {
   X,
   ChevronDown,
   Filter as FilterIcon,
+  Mail,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePhaseData } from '@/hooks/usePhaseData';
@@ -18,6 +19,38 @@ import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { EmptyState } from '@/components/common/EmptyState';
 import { channels as ALL_CHANNELS } from '@/data/channels';
 import { Button, Select, cn } from '@/components/ui';
+
+/** Filter accepts a curated channel set — including Email as a virtual key
+ *  that doesn't map to ChannelType but is shown in the filter UI. */
+type CampaignFilterChannel = ChannelType | 'email';
+
+const FILTER_CHANNELS: CampaignFilterChannel[] = [
+  'whatsapp',
+  'rcs',
+  'sms',
+  'ai_voice',
+  'email',
+];
+
+function FilterChannelGlyph({
+  channel,
+  size = 12,
+}: {
+  channel: CampaignFilterChannel;
+  size?: number;
+}) {
+  if (channel === 'email') {
+    return (
+      <div
+        className="inline-flex items-center justify-center rounded-md"
+        style={{ width: size + 12, height: size + 12, backgroundColor: '#0F766E1A' }}
+      >
+        <Mail size={size} style={{ color: '#0F766E' }} />
+      </div>
+    );
+  }
+  return <ChannelIcon channel={channel} size={size} />;
+}
 
 /**
  * /campaigns — Campaigns home — Phase 4 D.1.7 revamp.
@@ -64,7 +97,7 @@ function sortByRecency(a: Campaign, b: Campaign): number {
 type TimeWindow = '7d' | '30d' | '90d' | 'all' | 'custom';
 
 interface FilterState {
-  channels: ChannelType[];
+  channels: CampaignFilterChannel[];
   segmentId: string | 'all';
   timeWindow: TimeWindow;
 }
@@ -135,7 +168,7 @@ export function Campaigns() {
     setFilters(INITIAL_FILTERS);
   }
 
-  function toggleChannel(ch: ChannelType) {
+  function toggleChannel(ch: CampaignFilterChannel) {
     setFilters((f) => ({
       ...f,
       channels: f.channels.includes(ch)
@@ -224,7 +257,7 @@ export function Campaigns() {
                     key={ch}
                     label={
                       <span className="inline-flex items-center gap-1.5">
-                        <ChannelIcon channel={ch} size={11} />
+                        <FilterChannelGlyph channel={ch} size={11} />
                         {channelLabel(ch)}
                       </span>
                     }
@@ -301,9 +334,8 @@ export function Campaigns() {
 
 /* ─── Channel multi-select chip dropdown ──────────────────────────────── */
 
-const ALL_CHANNEL_TYPES: ChannelType[] = ALL_CHANNELS.map((c) => c.id);
-
-function channelLabel(ch: ChannelType): string {
+function channelLabel(ch: CampaignFilterChannel): string {
+  if (ch === 'email') return 'Email';
   return (
     ALL_CHANNELS.find((c) => c.id === ch)?.name ??
     ch.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
@@ -315,8 +347,8 @@ function ChannelFilterButton({
   onToggle,
   onClear,
 }: {
-  selected: ChannelType[];
-  onToggle: (ch: ChannelType) => void;
+  selected: CampaignFilterChannel[];
+  onToggle: (ch: CampaignFilterChannel) => void;
   onClear: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -369,7 +401,7 @@ function ChannelFilterButton({
           role="menu"
           className="absolute left-0 top-full mt-1 z-30 min-w-[220px] rounded-md border border-border-subtle bg-surface-raised shadow-[var(--shadow-popover)] p-1"
         >
-          {ALL_CHANNEL_TYPES.map((ch) => {
+          {FILTER_CHANNELS.map((ch) => {
             const isSelected = selected.includes(ch);
             return (
               <button
@@ -401,7 +433,7 @@ function ChannelFilterButton({
                     </svg>
                   )}
                 </span>
-                <ChannelIcon channel={ch} size={12} />
+                <FilterChannelGlyph channel={ch} size={12} />
                 <span className="flex-1">{channelLabel(ch)}</span>
               </button>
             );

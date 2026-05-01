@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Megaphone,
@@ -13,14 +12,9 @@ import {
   Settings2,
   ChevronsLeft,
   ChevronsRight,
-  Sun,
-  Moon,
-  SlidersHorizontal,
-  Check,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePhaseStore } from '@/store/phaseStore';
-import type { Phase } from '@/types';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -140,9 +134,8 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer: phase + theme dropdown · collapse toggle */}
+      {/* Footer: collapse toggle */}
       <div className="border-t border-border-subtle">
-        <SidebarFooterMenu collapsed={collapsed} />
         <button
           onClick={toggleSidebar}
           className="flex h-10 w-full items-center justify-center text-text-tertiary hover:bg-surface-raised hover:text-text-primary transition-colors"
@@ -152,104 +145,5 @@ export function Sidebar() {
         </button>
       </div>
     </motion.aside>
-  );
-}
-
-/* ─── Footer dropdown — phase indicator + theme toggle ───────────── */
-
-const PHASE_LABEL: Record<Phase, string> = {
-  day0: 'Day 0',
-  day1: 'Day 1',
-  day30: 'Day 30+',
-};
-
-function SidebarFooterMenu({ collapsed }: { collapsed: boolean }) {
-  const phase = usePhaseStore((s) => s.phase);
-  const setPhase = usePhaseStore((s) => s.setPhase);
-  const theme = usePhaseStore((s) => s.theme);
-  const toggleTheme = usePhaseStore((s) => s.toggleTheme);
-
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-10 w-full items-center gap-2 px-3 text-[12px] text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        <SlidersHorizontal size={14} className="shrink-0" />
-        {!collapsed && (
-          <>
-            <span className="font-medium text-text-primary">{PHASE_LABEL[phase]}</span>
-            <span className="text-text-tertiary">·</span>
-            <span className="capitalize">{theme}</span>
-          </>
-        )}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute left-2 right-2 bottom-full mb-1 z-50 rounded-md border border-border-subtle bg-surface-raised shadow-[var(--shadow-popover)] p-2"
-        >
-          <div className="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
-            Phase
-          </div>
-          {(['day0', 'day1', 'day30'] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              role="menuitemradio"
-              aria-checked={phase === p}
-              onClick={() => {
-                setPhase(p);
-                setOpen(false);
-              }}
-              className="flex w-full items-center justify-between rounded px-2 py-1.5 text-[13px] text-text-primary hover:bg-surface-sunken transition-colors"
-            >
-              <span>{PHASE_LABEL[p]}</span>
-              {phase === p && <Check size={14} className="text-brand-500" />}
-            </button>
-          ))}
-          <div className="my-1 h-px bg-border-subtle" />
-          <div className="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
-            Theme
-          </div>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              toggleTheme();
-              setOpen(false);
-            }}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-[13px] text-text-primary hover:bg-surface-sunken transition-colors"
-          >
-            <span className="inline-flex items-center gap-2">
-              {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
-              <span className="capitalize">{theme}</span>
-            </span>
-            <span className="text-[11px] text-text-tertiary">switch</span>
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
