@@ -1,24 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { BarChart2, Sparkles, TrendingUp, AlertTriangle, Trophy, Users, Mail } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
-  BarChart2,
-  Megaphone,
-  Bot,
-  Sparkles,
-  TrendingUp,
-  ArrowRight,
-  AlertTriangle,
-  Lightbulb,
-  Target,
-  Zap,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
@@ -26,559 +10,82 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
 import { usePhaseData } from '@/hooks/usePhaseData';
-import { useInsights } from '@/hooks/useInsights';
-import { useAgentStore } from '@/store/agentStore';
-import type { Campaign, Insight } from '@/types';
-import type { Agent } from '@/types/agent';
+import type { ChannelMetric, ChannelType } from '@/types';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { KPIBar } from '@/components/analytics/KPIBar';
-import { CostRevenueChart } from '@/components/analytics/CostRevenueChart';
 import { ChannelIcon } from '@/components/common/ChannelIcon';
 import { EmptyState } from '@/components/common/EmptyState';
-import { InlineInsight } from '@/components/ai/InlineInsight';
-import { formatINR, formatCount, formatPercent, formatROI } from '@/utils/format';
-import { Link } from 'react-router-dom';
+import { formatCount, formatINR, formatPercent, formatROI } from '@/utils/format';
 
-type ActiveTab = 'overview' | 'campaigns' | 'agents';
+// Channel Analytics has its own widened key so we can include Email without
+// dragging it through every Record<ChannelType, ...> in the codebase.
+type AnalyticsChannelKey = ChannelType | 'email';
 
-// AI Recommendation types
-interface AIRecommendation {
-  id: string;
-  type: 'opportunity' | 'warning' | 'optimization' | 'insight';
-  scope: 'campaign' | 'agent' | 'global';
-  title: string;
-  description: string;
-  impact: string;
-  action: string;
-  actionLabel: string;
-  confidence: number;
-  relatedEntity?: string;
+interface AnalyticsChannelMetric extends Omit<ChannelMetric, 'channel'> {
+  channel: AnalyticsChannelKey;
 }
 
-const AI_RECOMMENDATIONS: AIRecommendation[] = [
-  {
-    id: 'rec_1',
-    type: 'opportunity',
-    scope: 'campaign',
-    title: 'Switch High-LTV segment to AI Voice for 3x conversion lift',
-    description: 'Your High-LTV Re-engagement campaign is using SMS as primary channel, but AI Voice shows 7.2% conversion vs SMS at 2.1% for similar segments across the platform.',
-    impact: 'Estimated +2,400 additional conversions per month',
-    action: '/campaigns/camp_001/edit',
-    actionLabel: 'Edit Campaign Channels',
-    confidence: 92,
-    relatedEntity: 'High-LTV Re-engagement',
-  },
-  {
-    id: 'rec_2',
-    type: 'warning',
-    scope: 'campaign',
-    title: 'Festival Cashback Promo approaching budget ceiling',
-    description: 'Current burn rate will exhaust budget in 2.3 days. Campaign is performing at 4.2x ROI — consider increasing budget to capture remaining opportunity.',
-    impact: 'Risk of stopping a high-ROI campaign prematurely',
-    action: '/campaigns/camp_002/edit',
-    actionLabel: 'Adjust Budget',
-    confidence: 98,
-    relatedEntity: 'Festival Cashback Promo',
-  },
-  {
-    id: 'rec_3',
-    type: 'optimization',
-    scope: 'agent',
-    title: 'Sales Agent: Add budget objection handling to improve close rate',
-    description: 'Failure analysis shows 55% of failed calls involve misunderstood intents around pricing. Adding explicit budget handling could reduce failures by 40%.',
-    impact: 'Projected success rate increase from 87.3% to 92%',
-    action: '/agents/agent_1',
-    actionLabel: 'View Agent',
-    confidence: 87,
-    relatedEntity: 'Sales Outreach Agent',
-  },
-  {
-    id: 'rec_4',
-    type: 'insight',
-    scope: 'global',
-    title: 'WhatsApp messages between 10-11 AM show 2.4x higher open rates',
-    description: 'Cross-campaign analysis reveals a strong time-of-day signal for WhatsApp delivery. Scheduling campaigns in this window could significantly boost engagement.',
-    impact: '+18% average open rate improvement',
-    action: '/campaigns/new',
-    actionLabel: 'Apply to New Campaign',
-    confidence: 94,
-  },
-  {
-    id: 'rec_5',
-    type: 'optimization',
-    scope: 'agent',
-    title: 'Switch Support Agent to gpt-realtime-mini for 35% cost reduction',
-    description: 'Your Customer Support Agent uses gpt-realtime (1.5x cost) but the support use case shows negligible quality difference with gpt-realtime-mini. Switch to save without impacting performance.',
-    impact: 'Save approx $980/month with same 92.5% success rate',
-    action: '/agents/agent_2',
-    actionLabel: 'View Agent',
-    confidence: 91,
-    relatedEntity: 'Customer Support Agent',
-  },
-  {
-    id: 'rec_6',
-    type: 'opportunity',
-    scope: 'campaign',
-    title: 'Untapped segment: Dormant users with high past LTV',
-    description: 'We identified 45K users who were high-value 6+ months ago but haven\'t been targeted. Similar re-activation campaigns on the platform see 3.8% conversion rates.',
-    impact: 'Potential 1,710 reactivated users, est. revenue impact 8.5L',
-    action: '/campaigns/new',
-    actionLabel: 'Create Campaign',
-    confidence: 82,
-  },
-];
-
-const REC_ICONS = {
-  opportunity: { icon: Target, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-  warning: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  optimization: { icon: Zap, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
-  insight: { icon: Lightbulb, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+const CHANNEL_NAMES: Record<AnalyticsChannelKey, string> = {
+  sms: 'SMS',
+  whatsapp: 'WhatsApp',
+  rcs: 'RCS',
+  ai_voice: 'AI Voice',
+  email: 'Email',
+  field_executive: 'Field Exec',
+  push_notification: 'Push',
+  in_app_banner: 'In-App',
+  facebook_ads: 'FB Ads',
+  instagram_ads: 'IG Ads',
 };
 
-// Campaign deep-dive mock data
-const CAMPAIGN_TREND_DATA = [
-  { day: 'Jan 22', sent: 8500, delivered: 8160, converted: 357 },
-  { day: 'Jan 23', sent: 12400, delivered: 11904, converted: 536 },
-  { day: 'Jan 24', sent: 15600, delivered: 14976, converted: 689 },
-  { day: 'Jan 25', sent: 9800, delivered: 9408, converted: 412 },
-  { day: 'Jan 26', sent: 14500, delivered: 13920, converted: 627 },
-  { day: 'Jan 27', sent: 18700, delivered: 17952, converted: 843 },
-  { day: 'Jan 28', sent: 20300, delivered: 19488, converted: 914 },
-];
+const CHANNEL_COLORS: Record<AnalyticsChannelKey, string> = {
+  sms: '#6366F1',
+  whatsapp: '#25D366',
+  rcs: '#00BAF2',
+  ai_voice: '#F59E0B',
+  email: '#0F766E',
+  field_executive: '#8B5CF6',
+  push_notification: '#EF4444',
+  in_app_banner: '#0EA5E9',
+  facebook_ads: '#1877F2',
+  instagram_ads: '#E4405F',
+};
 
-// Agent deep-dive mock data
-const AGENT_TREND_DATA = [
-  { day: 'Jan 22', calls: 89, success: 78, cost: 311 },
-  { day: 'Jan 23', calls: 124, success: 109, cost: 434 },
-  { day: 'Jan 24', calls: 156, success: 138, cost: 546 },
-  { day: 'Jan 25', calls: 98, success: 85, cost: 343 },
-  { day: 'Jan 26', calls: 145, success: 127, cost: 507 },
-  { day: 'Jan 27', calls: 187, success: 164, cost: 654 },
-  { day: 'Jan 28', calls: 203, success: 179, cost: 710 },
-];
+// Synthesized email row to slot in place of field_executive on this page only.
+const EMAIL_METRIC: AnalyticsChannelMetric = {
+  channel: 'email',
+  sent: 184500,
+  delivered: 178500,
+  opened: 76300,
+  converted: 5320,
+  cost: 92250,
+  revenue: 1064000,
+  deliveryRate: 96.7,
+  conversionRate: 2.9,
+  roi: 11.5,
+};
 
-function RecommendationCard({ rec }: { rec: AIRecommendation }) {
-  const [expanded, setExpanded] = useState(false);
-  const cfg = REC_ICONS[rec.type];
-  const Icon = cfg.icon;
-
-  return (
-    <div className={`rounded-lg border-2 ${cfg.border} ${cfg.bg} overflow-hidden transition-all`}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-start gap-3 p-4 text-left"
-        data-testid={`rec-${rec.id}`}
-      >
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white`}>
-          <Icon size={18} className={cfg.color} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-sm font-semibold text-text-primary">{rec.title}</h4>
-          </div>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-text-secondary capitalize">{rec.scope}</span>
-            <span className="text-text-secondary">{rec.confidence}% confidence</span>
-            {rec.relatedEntity && (
-              <span className="text-text-secondary">{rec.relatedEntity}</span>
-            )}
-          </div>
-        </div>
-        <div className="shrink-0 mt-1">
-          {expanded ? (
-            <ChevronUp size={16} className="text-text-secondary" />
-          ) : (
-            <ChevronDown size={16} className="text-text-secondary" />
-          )}
-        </div>
-      </button>
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-0">
-              <div className="rounded-lg bg-white p-4 space-y-3">
-                <p className="text-sm text-text-secondary">{rec.description}</p>
-                <div className="flex items-center gap-2 text-sm">
-                  <TrendingUp size={14} className="text-green-600" />
-                  <span className="font-medium text-text-primary">{rec.impact}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-cyan"
-                      style={{ width: `${rec.confidence}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-text-primary">{rec.confidence}%</span>
-                </div>
-                <Link
-                  to={rec.action}
-                  className="inline-flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90"
-                >
-                  {rec.actionLabel}
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function AIRecommendationsPanel({ scope }: { scope: 'all' | 'campaign' | 'agent' }) {
-  const filtered = scope === 'all'
-    ? AI_RECOMMENDATIONS
-    : AI_RECOMMENDATIONS.filter((r) => r.scope === scope || r.scope === 'global');
-
-  return (
-    <div className="rounded-lg ring-1 ring-[#E5E7EB] overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-cyan/5 to-purple-50 border-b border-[#E5E7EB]">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white ring-1 ring-cyan/20">
-          <Sparkles size={18} className="text-cyan" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary">AI Recommendations</h3>
-          <p className="text-xs text-text-secondary">
-            {filtered.length} actionable insights based on cross-platform analysis
-          </p>
-        </div>
-      </div>
-      <div className="p-4 space-y-3">
-        {filtered.map((rec) => (
-          <RecommendationCard key={rec.id} rec={rec} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CampaignDeepDive({ campaigns }: { campaigns: Campaign[] }) {
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    campaigns.filter((c) => c.metrics.sent > 0)[0] || null
-  );
-
-  const activeCampaigns = campaigns.filter((c) => c.metrics.sent > 0);
-
-  return (
-    <div className="space-y-6">
-      {/* Campaign Selector */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-text-secondary">Deep Dive Into:</span>
-        <div className="flex flex-wrap gap-2">
-          {activeCampaigns.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedCampaign(c)}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                selectedCampaign?.id === c.id
-                  ? 'bg-cyan text-white'
-                  : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
-              }`}
-              data-testid={`campaign-pill-${c.id}`}
-            >
-              <Megaphone size={14} />
-              {c.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedCampaign && (
-        <motion.div
-          key={selectedCampaign.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {/* Campaign KPIs */}
-          <div className="grid grid-cols-5 gap-4">
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Total Sent</div>
-              <div className="text-xl font-bold text-text-primary">{formatCount(selectedCampaign.metrics.sent)}</div>
-              <div className="text-xs text-green-600 mt-1">Delivery: {formatPercent(selectedCampaign.metrics.deliveryRate)}</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Conversions</div>
-              <div className="text-xl font-bold text-text-primary">{formatCount(selectedCampaign.metrics.converted)}</div>
-              <div className="text-xs text-cyan mt-1">Rate: {formatPercent(selectedCampaign.metrics.conversionRate)}</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Revenue</div>
-              <div className="text-xl font-bold text-green-600">{formatINR(selectedCampaign.metrics.revenue)}</div>
-              <div className="text-xs text-text-secondary mt-1">{selectedCampaign.revenueLabel}</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Spend</div>
-              <div className="text-xl font-bold text-text-primary">{formatINR(selectedCampaign.metrics.cost)}</div>
-              <div className="text-xs text-text-secondary mt-1">of {formatINR(selectedCampaign.budget.allocated)}</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">ROI</div>
-              <div className={`text-xl font-bold ${selectedCampaign.metrics.roi >= 3 ? 'text-green-600' : 'text-amber-600'}`}>
-                {formatROI(selectedCampaign.metrics.roi)}
-              </div>
-              <div className="text-xs text-text-secondary mt-1">Return on investment</div>
-            </div>
-          </div>
-
-          {/* Campaign Trend Chart */}
-          <div className="rounded-lg bg-white p-5 ring-1 ring-[#E5E7EB]">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Daily Performance Trend</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={CAMPAIGN_TREND_DATA}>
-                <defs>
-                  <linearGradient id="campConverted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <Tooltip />
-                <Area type="monotone" dataKey="converted" name="Conversions" stroke="#06B6D4" fillOpacity={1} fill="url(#campConverted)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Channel breakdown for this campaign */}
-          {selectedCampaign.channelMetrics.length > 0 && (
-            <div className="rounded-lg bg-white ring-1 ring-[#E5E7EB] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#E5E7EB]">
-                <h3 className="text-sm font-semibold text-text-primary">Channel Breakdown</h3>
-              </div>
-              <div className="grid grid-cols-3 gap-px bg-[#E5E7EB]">
-                {selectedCampaign.channelMetrics.map((ch) => (
-                  <div key={ch.channel} className="bg-white p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <ChannelIcon channel={ch.channel} size={16} />
-                      <span className="text-sm font-medium text-text-primary capitalize">
-                        {ch.channel.replace('_', ' ')}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <div className="text-text-secondary">Sent</div>
-                        <div className="font-semibold text-text-primary">{formatCount(ch.sent)}</div>
-                      </div>
-                      <div>
-                        <div className="text-text-secondary">Conv.</div>
-                        <div className="font-semibold text-cyan">{formatPercent(ch.conversionRate)}</div>
-                      </div>
-                      <div>
-                        <div className="text-text-secondary">Spend</div>
-                        <div className="font-semibold text-text-primary">{formatINR(ch.cost)}</div>
-                      </div>
-                      <div>
-                        <div className="text-text-secondary">ROI</div>
-                        <div className={`font-semibold ${ch.roi >= 3 ? 'text-green-600' : 'text-amber-600'}`}>
-                          {formatROI(ch.roi)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Campaign-specific AI recommendations */}
-          <AIRecommendationsPanel scope="campaign" />
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-function AgentDeepDive() {
-  const agents = useAgentStore((s) => s.agents);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(agents[0] || null);
-
-  return (
-    <div className="space-y-6">
-      {/* Agent Selector */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-text-secondary">Deep Dive Into:</span>
-        <div className="flex flex-wrap gap-2">
-          {agents.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => setSelectedAgent(a)}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                selectedAgent?.id === a.id
-                  ? 'bg-cyan text-white'
-                  : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
-              }`}
-              data-testid={`agent-pill-${a.id}`}
-            >
-              <Bot size={14} />
-              {a.config.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedAgent && (
-        <motion.div
-          key={selectedAgent.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {/* Agent KPIs */}
-          <div className="grid grid-cols-5 gap-4">
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Total Calls</div>
-              <div className="text-xl font-bold text-text-primary">{selectedAgent.metrics.totalCalls.toLocaleString()}</div>
-              <div className="text-xs text-green-600 mt-1">{selectedAgent.metrics.successfulCalls.toLocaleString()} successful</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Success Rate</div>
-              <div className={`text-xl font-bold ${selectedAgent.metrics.completionRate >= 90 ? 'text-green-600' : 'text-amber-600'}`}>
-                {selectedAgent.metrics.completionRate.toFixed(1)}%
-              </div>
-              <div className="text-xs text-text-secondary mt-1">Completion rate</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Failed Calls</div>
-              <div className="text-xl font-bold text-red-600">{selectedAgent.metrics.failedCalls}</div>
-              <div className="text-xs text-text-secondary mt-1">{(100 - selectedAgent.metrics.completionRate).toFixed(1)}% failure</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Avg Duration</div>
-              <div className="text-xl font-bold text-text-primary">
-                {Math.floor(selectedAgent.metrics.avgDuration / 60)}m {selectedAgent.metrics.avgDuration % 60}s
-              </div>
-              <div className="text-xs text-text-secondary mt-1">Per call</div>
-            </div>
-            <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
-              <div className="text-xs text-text-secondary mb-1">Avg Latency</div>
-              <div className={`text-xl font-bold ${selectedAgent.metrics.avgLatency < 500 ? 'text-green-600' : 'text-amber-600'}`}>
-                {selectedAgent.metrics.avgLatency}ms
-              </div>
-              <div className="text-xs text-text-secondary mt-1">Response time</div>
-            </div>
-          </div>
-
-          {/* Agent Config Summary */}
-          <div className="rounded-lg bg-white p-5 ring-1 ring-[#E5E7EB]">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Agent Configuration</h3>
-            <div className="grid grid-cols-4 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-text-secondary">Model:</div>
-                <div className="text-sm font-medium text-text-primary">{selectedAgent.config.model}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-text-secondary">Voice:</div>
-                <div className="text-sm font-medium text-text-primary capitalize">{selectedAgent.config.voice}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-text-secondary">Use Case:</div>
-                <div className="text-sm font-medium text-text-primary capitalize">{selectedAgent.config.useCase}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-text-secondary">Version:</div>
-                <div className="text-sm font-medium text-text-primary">v{selectedAgent.version}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Agent Trend Chart */}
-          <div className="rounded-lg bg-white p-5 ring-1 ring-[#E5E7EB]">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Daily Call Volume & Success</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={AGENT_TREND_DATA}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <Tooltip />
-                <Bar dataKey="calls" name="Total Calls" fill="#E5E7EB" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="success" name="Successful" fill="#06B6D4" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Quick Links */}
-          <div className="grid grid-cols-3 gap-4">
-            <Link
-              to={`/agents/${selectedAgent.id}`}
-              className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB] hover:ring-2 hover:ring-cyan transition-all flex items-center gap-3"
-              data-testid="link-agent-detail"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
-                <Bot size={20} className="text-purple-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-text-primary">View Full Evaluation</div>
-                <div className="text-xs text-text-secondary">Transcripts, failures, prompt analysis</div>
-              </div>
-              <ArrowRight size={16} className="text-text-secondary ml-auto" />
-            </Link>
-            <Link
-              to={`/agents/${selectedAgent.id}`}
-              className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB] hover:ring-2 hover:ring-cyan transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-                <AlertTriangle size={20} className="text-amber-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-text-primary">Failure Analysis</div>
-                <div className="text-xs text-text-secondary">{selectedAgent.metrics.failedCalls} failures to investigate</div>
-              </div>
-              <ArrowRight size={16} className="text-text-secondary ml-auto" />
-            </Link>
-            <Link
-              to={`/agents/${selectedAgent.id}`}
-              className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB] hover:ring-2 hover:ring-cyan transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan/10">
-                <Sparkles size={20} className="text-cyan" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-text-primary">Prompt Enhancement</div>
-                <div className="text-xs text-text-secondary">AI-suggested improvements</div>
-              </div>
-              <ArrowRight size={16} className="text-text-secondary ml-auto" />
-            </Link>
-          </div>
-
-          {/* Agent-specific AI recommendations */}
-          <AIRecommendationsPanel scope="agent" />
-        </motion.div>
-      )}
-    </div>
-  );
+function buildDisplayChannels(breakdown: ChannelMetric[]): AnalyticsChannelMetric[] {
+  return [
+    ...breakdown.filter((c) => c.channel !== 'field_executive'),
+    EMAIL_METRIC,
+  ];
 }
 
 export function Analytics() {
-  const { campaigns, isDay0, isDay1 } = usePhaseData();
-  const allInsights = useInsights('analytics');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-
-  function handleDismiss(id: string) {
-    setDismissed((prev) => new Set([...prev, id]));
-  }
+  const { analytics, isDay0, isDay1 } = usePhaseData();
 
   if (isDay0 || isDay1) {
     return (
       <>
-        <PageHeader title="Analytics" />
+        <PageHeader title="Channel Analytics" />
         <div className="mt-8 rounded-lg bg-white ring-1 ring-[#E5E7EB]">
           <EmptyState
             icon={BarChart2}
-            title="Analytics will populate after your first campaign completes"
-            description="Once you run campaigns, you'll see cross-campaign analytics, ROI trends, and channel benchmarks here."
+            title="Channel analytics will populate after your first campaign completes"
+            description="Once campaigns run, you'll see per-channel reach, conversion, cost, and ROI here."
             ctaLabel="Create Campaign"
             ctaHref="/campaigns/new"
           />
@@ -586,6 +93,8 @@ export function Analytics() {
       </>
     );
   }
+
+  const channels = buildDisplayChannels(analytics.channelBreakdown);
 
   return (
     <motion.div
@@ -595,91 +104,366 @@ export function Analytics() {
       className="flex flex-col gap-6"
     >
       <PageHeader
-        title="Analytics"
-        subtitle="Deep-dive performance intelligence across campaigns and agents"
+        title="Channel Analytics"
+        subtitle="How each channel is performing across reach, conversion, and ROI"
       />
 
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit">
-        {([
-          { id: 'overview' as const, label: 'Overview', icon: BarChart2 },
-          { id: 'campaigns' as const, label: 'Campaigns', icon: Megaphone },
-          { id: 'agents' as const, label: 'Agents', icon: Bot },
-        ]).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === id
-                ? 'bg-white text-text-primary shadow-sm'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
-            data-testid={`analytics-tab-${id}`}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
+      <ChannelKPIGrid channels={channels} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChannelChart
+          title="Conversion rate by channel"
+          subtitle="Higher is better"
+          channels={channels}
+          metric="conversionRate"
+          formatter={(v) => `${v.toFixed(1)}%`}
+        />
+        <ChannelChart
+          title="ROI by channel"
+          subtitle="Revenue ÷ cost"
+          channels={channels}
+          metric="roi"
+          formatter={(v) => `${v.toFixed(1)}x`}
+        />
       </div>
 
-      {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        {activeTab === 'overview' && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            <KPIBar />
-            <CostRevenueChart />
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-text-primary">Detailed breakdown</h2>
+        <ChannelComparisonTable rows={channels} />
+      </section>
 
-            {/* AI Recommendations - All */}
-            <AIRecommendationsPanel scope="all" />
-
-            {/* AI Insights from existing system */}
-            {allInsights.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold text-text-primary">Platform Insights</h2>
-                <div className="flex flex-col gap-2">
-                  {allInsights
-                    .filter((ins: Insight) => !dismissed.has(ins.id))
-                    .map((ins: Insight) => (
-                      <InlineInsight
-                        key={ins.id}
-                        insight={ins}
-                        onDismiss={ins.dismissable ? () => handleDismiss(ins.id) : undefined}
-                      />
-                    ))}
-                </div>
-              </section>
-            )}
-          </motion.div>
-        )}
-
-        {activeTab === 'campaigns' && (
-          <motion.div
-            key="campaigns"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-          >
-            <CampaignDeepDive campaigns={campaigns} />
-          </motion.div>
-        )}
-
-        {activeTab === 'agents' && (
-          <motion.div
-            key="agents"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-          >
-            <AgentDeepDive />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AISummarySection channels={channels} />
     </motion.div>
+  );
+}
+
+/* ─── Glyph helper that renders Mail for Email, ChannelIcon otherwise ──── */
+
+function ChannelGlyph({ channel, size = 14 }: { channel: AnalyticsChannelKey; size?: number }) {
+  if (channel === 'email') {
+    return (
+      <div
+        className="inline-flex items-center justify-center rounded-md"
+        style={{ width: size + 12, height: size + 12, backgroundColor: '#0F766E1A' }}
+      >
+        <Mail size={size} style={{ color: '#0F766E' }} />
+      </div>
+    );
+  }
+  return <ChannelIcon channel={channel} size={size} />;
+}
+
+/* ─── Per-channel KPI grid ──────────────────────────────────────────────── */
+
+function ChannelKPIGrid({ channels }: { channels: AnalyticsChannelMetric[] }) {
+  if (channels.length === 0) return null;
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {channels.map((ch) => (
+        <ChannelKPICard key={ch.channel} metric={ch} />
+      ))}
+    </div>
+  );
+}
+
+function ChannelKPICard({ metric }: { metric: AnalyticsChannelMetric }) {
+  return (
+    <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
+      <div className="flex items-center gap-2">
+        <ChannelGlyph channel={metric.channel} size={14} />
+        <span className="text-sm font-semibold text-text-primary">
+          {CHANNEL_NAMES[metric.channel]}
+        </span>
+      </div>
+      <div className="mt-3 flex items-end justify-between">
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-text-tertiary">
+            Conv. rate
+          </div>
+          <div className="text-2xl font-bold text-text-primary tabular-nums">
+            {formatPercent(metric.conversionRate)}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wide text-text-tertiary">ROI</div>
+          <div className="text-sm font-semibold text-text-primary tabular-nums">
+            {formatROI(metric.roi)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-x-3 border-t border-[#F3F4F6] pt-3 text-[11px]">
+        <div>
+          <div className="text-text-tertiary">Sent</div>
+          <div className="font-medium text-text-primary tabular-nums">
+            {formatCount(metric.sent)}
+          </div>
+        </div>
+        <div>
+          <div className="text-text-tertiary">Converted</div>
+          <div className="font-medium text-text-primary tabular-nums">
+            {formatCount(metric.converted)}
+          </div>
+        </div>
+        <div>
+          <div className="text-text-tertiary">Cost</div>
+          <div className="font-medium text-text-primary tabular-nums">
+            {formatINR(metric.cost)}
+          </div>
+        </div>
+        <div>
+          <div className="text-text-tertiary">Revenue</div>
+          <div className="font-medium text-text-primary tabular-nums">
+            {formatINR(metric.revenue)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Bar chart by channel ──────────────────────────────────────────────── */
+
+interface ChannelChartProps {
+  title: string;
+  subtitle: string;
+  channels: AnalyticsChannelMetric[];
+  metric: keyof Pick<AnalyticsChannelMetric, 'conversionRate' | 'roi' | 'deliveryRate'>;
+  formatter: (v: number) => string;
+}
+
+function ChannelChart({ title, subtitle, channels, metric, formatter }: ChannelChartProps) {
+  const data = channels.map((c) => ({
+    name: CHANNEL_NAMES[c.channel],
+    channel: c.channel,
+    value: c[metric],
+  }));
+
+  return (
+    <div className="rounded-lg bg-white p-4 ring-1 ring-[#E5E7EB]">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+        <p className="text-xs text-text-secondary">{subtitle}</p>
+      </div>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: '#6B7280' }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#6B7280' }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => formatter(v)}
+              width={45}
+            />
+            <Tooltip
+              cursor={{ fill: '#F3F4F6' }}
+              formatter={(v) => formatter(Number(v ?? 0))}
+              contentStyle={{
+                fontSize: 12,
+                borderRadius: 6,
+                border: '1px solid #E5E7EB',
+              }}
+            />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {data.map((d) => (
+                <Cell key={d.channel} fill={CHANNEL_COLORS[d.channel]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Detailed breakdown table (handles email key) ──────────────────────── */
+
+function ChannelComparisonTable({ rows }: { rows: AnalyticsChannelMetric[] }) {
+  if (rows.length === 0) return null;
+  const bestConvRate = Math.max(...rows.map((r) => r.conversionRate));
+
+  return (
+    <div className="overflow-x-auto rounded-lg ring-1 ring-[#E5E7EB]">
+      <table className="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
+            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Channel
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Sent
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Delivered
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Opened
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Converted
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Cost
+            </th>
+            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              Conv. Rate
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-[#F3F4F6]">
+          {rows.map((m) => {
+            const isBest = m.conversionRate === bestConvRate && bestConvRate > 0;
+            return (
+              <tr key={m.channel} className={isBest ? 'bg-[#F0FDF4]' : 'hover:bg-[#FAFAFA]'}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <ChannelGlyph channel={m.channel} size={14} />
+                    <span className="font-medium text-text-primary">
+                      {CHANNEL_NAMES[m.channel]}
+                    </span>
+                    {isBest && (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                        Best
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCount(m.sent)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCount(m.delivered)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCount(m.opened)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCount(m.converted)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatINR(m.cost)}</td>
+                <td className="px-4 py-3 text-right font-medium tabular-nums">
+                  {formatPercent(m.conversionRate)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ─── AI Summary ────────────────────────────────────────────────────────── */
+
+interface SummaryInsight {
+  id: string;
+  tone: 'positive' | 'neutral' | 'attention' | 'highlight';
+  icon: typeof Sparkles;
+  title: string;
+  body: string;
+}
+
+function buildSummaryInsights(channels: AnalyticsChannelMetric[]): SummaryInsight[] {
+  if (channels.length === 0) return [];
+
+  const byConv = [...channels].sort((a, b) => b.conversionRate - a.conversionRate);
+  const byROI = [...channels].sort((a, b) => b.roi - a.roi);
+  const byReach = [...channels].sort((a, b) => b.sent - a.sent);
+
+  const bestConv = byConv[0];
+  const worstConv = byConv[byConv.length - 1];
+  const bestROI = byROI[0];
+  const widestReach = byReach[0];
+  const totalSent = channels.reduce((sum, c) => sum + c.sent, 0);
+  const totalRevenue = channels.reduce((sum, c) => sum + c.revenue, 0);
+
+  const conversionLift = bestConv.conversionRate / Math.max(worstConv.conversionRate, 0.1);
+
+  const insights: SummaryInsight[] = [
+    {
+      id: 'best-conv',
+      tone: 'positive',
+      icon: Trophy,
+      title: `${CHANNEL_NAMES[bestConv.channel]} leads on conversion`,
+      body: `Highest conversion rate at ${formatPercent(bestConv.conversionRate)} — ${conversionLift.toFixed(1)}× the lowest channel (${CHANNEL_NAMES[worstConv.channel]} at ${formatPercent(worstConv.conversionRate)}). Worth doubling down where ${CHANNEL_NAMES[bestConv.channel]} is reachable.`,
+    },
+    {
+      id: 'best-roi',
+      tone: 'highlight',
+      icon: TrendingUp,
+      title: `${CHANNEL_NAMES[bestROI.channel]} returns the most per rupee`,
+      body: `Top ROI at ${formatROI(bestROI.roi)} on ${formatINR(bestROI.cost)} of spend, generating ${formatINR(bestROI.revenue)} in revenue. Strong candidate for incremental budget.`,
+    },
+    {
+      id: 'widest-reach',
+      tone: 'neutral',
+      icon: Users,
+      title: `${CHANNEL_NAMES[widestReach.channel]} is reaching the most users`,
+      body: `${formatCount(widestReach.sent)} sends so far this period — about ${Math.round((widestReach.sent / totalSent) * 100)}% of total reach across all channels.`,
+    },
+    {
+      id: 'attention',
+      tone: 'attention',
+      icon: AlertTriangle,
+      title: `${CHANNEL_NAMES[worstConv.channel]} engagement is trailing`,
+      body: `${formatPercent(worstConv.conversionRate)} conversion is the lowest of the active mix. Consider A/B testing copy, send-time, or whether ${CHANNEL_NAMES[worstConv.channel]} is the right primary channel for this audience.`,
+    },
+    {
+      id: 'totals',
+      tone: 'neutral',
+      icon: Sparkles,
+      title: 'Overall channel performance',
+      body: `${formatCount(totalSent)} messages sent across ${channels.length} channels generated ${formatINR(totalRevenue)} in revenue. The Detailed Breakdown above ranks every channel side-by-side.`,
+    },
+  ];
+
+  return insights;
+}
+
+const TONE_STYLES: Record<SummaryInsight['tone'], { bg: string; ring: string; iconBg: string; iconColor: string }> = {
+  positive: { bg: 'bg-green-50', ring: 'ring-green-200', iconBg: 'bg-green-100', iconColor: 'text-green-700' },
+  highlight: { bg: 'bg-amber-50', ring: 'ring-amber-200', iconBg: 'bg-amber-100', iconColor: 'text-amber-700' },
+  attention: { bg: 'bg-rose-50', ring: 'ring-rose-200', iconBg: 'bg-rose-100', iconColor: 'text-rose-700' },
+  neutral: { bg: 'bg-white', ring: 'ring-[#E5E7EB]', iconBg: 'bg-cyan/10', iconColor: 'text-cyan' },
+};
+
+function AISummarySection({ channels }: { channels: AnalyticsChannelMetric[] }) {
+  const insights = buildSummaryInsights(channels);
+  if (insights.length === 0) return null;
+
+  return (
+    <section className="rounded-lg ring-1 ring-[#E5E7EB] overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-cyan/10 via-purple-50 to-pink-50 border-b border-[#E5E7EB]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white ring-1 ring-cyan/20">
+          <Sparkles size={18} className="text-cyan" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">AI Summary</h3>
+          <p className="text-xs text-text-secondary">
+            Auto-generated read of your channel mix — what's working, what to watch
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        {insights.map((ins) => {
+          const tone = TONE_STYLES[ins.tone];
+          const Icon = ins.icon;
+          return (
+            <div
+              key={ins.id}
+              className={`flex gap-3 rounded-lg p-3.5 ring-1 ${tone.bg} ${tone.ring}`}
+            >
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${tone.iconBg}`}
+              >
+                <Icon size={16} className={tone.iconColor} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold text-text-primary">{ins.title}</div>
+                <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">{ins.body}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

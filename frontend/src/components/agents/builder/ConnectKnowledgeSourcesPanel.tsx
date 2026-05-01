@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { BookOpen, Plus, X, Users } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { BookOpen, Plus, X, Users, UploadCloud, FileText } from 'lucide-react';
 import {
   Modal,
   Button,
@@ -26,11 +26,11 @@ interface Props {
   onChange: (next: AgentKBAttachment[]) => void;
 }
 
-type PickerMode = 'add' | 'reuse';
-
 export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
   const allKBs = useKnowledgeBaseStore((s) => s.knowledgeBases);
-  const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
+  const createKB = useKnowledgeBaseStore((s) => s.createKB);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [reuseOpen, setReuseOpen] = useState(false);
 
   const attachedIds = useMemo(
     () => new Set(attachments.map((a) => a.knowledgeBaseId)),
@@ -47,7 +47,23 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
   function addAttachment(kbId: string) {
     if (attachedIds.has(kbId)) return;
     onChange([...attachments, { knowledgeBaseId: kbId, ...DEFAULT_KB_ATTACHMENT }]);
-    setPickerMode(null);
+    setReuseOpen(false);
+  }
+
+  function handleUpload(name: string, files: File[]) {
+    const totalChunks = files.reduce(
+      (acc, f) => acc + Math.max(1, Math.round(f.size / 2048)),
+      0,
+    );
+    const kb = createKB({
+      name: name.trim() || files[0]?.name.replace(/\.[^.]+$/, '') || 'Uploaded knowledge',
+      description: `Uploaded ${files.length} document${files.length === 1 ? '' : 's'}`,
+      source: 'files',
+      documentCount: files.length,
+      chunkCount: totalChunks,
+    });
+    onChange([...attachments, { knowledgeBaseId: kb.id, ...DEFAULT_KB_ATTACHMENT }]);
+    setUploadOpen(false);
   }
 
   function detach(kbId: string) {
@@ -76,7 +92,7 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
           variant="secondary"
           size="sm"
           iconLeft={<Plus size={14} />}
-          onClick={() => setPickerMode('add')}
+          onClick={() => setUploadOpen(true)}
         >
           Add knowledge
         </Button>
@@ -108,7 +124,7 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
 
       <button
         type="button"
-        onClick={() => setPickerMode('reuse')}
+        onClick={() => setReuseOpen(true)}
         disabled={reusableCount === 0}
         className={cn(
           'inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors',
@@ -123,9 +139,15 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
         </span>
       </button>
 
+      <UploadKnowledgeModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onUpload={handleUpload}
+      />
+
       <KBPickerModal
-        mode={pickerMode}
-        onClose={() => setPickerMode(null)}
+        open={reuseOpen}
+        onClose={() => setReuseOpen(false)}
         knowledgeBases={allKBs}
         attachedIds={attachedIds}
         onPick={addAttachment}
@@ -274,17 +296,175 @@ function AttachmentCard({ attachment, kb, onChange, onDetach }: AttachmentCardPr
   );
 }
 
-/* ─── Picker modal ─────────────────────────────────────────────────────── */
+/* ─── Upload modal ─────────────────────────────────────────────────────── */
+
+const ACCEPTED_EXT = ['.pdf', '.docx', '.txt'] as const;
+const ACCEPT_ATTR = ACCEPTED_EXT.join(',');
+
+interface UploadModalProps {
+  open: boolean;
+  onClose: () => void;
+  onUpload: (name: string, files: File[]) => void;
+}
+
+function UploadKnowledgeModal({ open, onClose, onUpload }: UploadModalProps) {
+  const [name, setName] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setName('');
+    setFiles([]);
+    setDragOver(false);
+  }
+
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
+  function acceptFiles(incoming: FileList | File[]) {
+    const next = Array.from(incoming).filter((f) => {
+      const ext = '.' + (f.name.split('.').pop() ?? '').toLowerCase();
+      return (ACCEPTED_EXT as readonly string[]).includes(ext);
+    });
+    if (next.length === 0) return;
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}:${f.size}`));
+      return [
+        ...prev,
+        ...next.filter((f) => !seen.has(`${f.name}:${f.size}`)),
+      ];
+    });
+  }
+
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function handleSubmit() {
+    if (files.length === 0) return;
+    onUpload(name, files);
+    reset();
+  }
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Add knowledge" size="md">
+      <div className="flex flex-col gap-4">
+        <Input
+          label="Name"
+          placeholder="e.g., Sales playbook"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <div>
+          <label className="mb-1.5 block text-[12px] font-medium text-text-primary">
+            Documents
+          </label>
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer?.files) acceptFiles(e.dataTransfer.files);
+            }}
+            onClick={() => inputRef.current?.click()}
+            className={cn(
+              'flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed p-6 text-center transition-colors',
+              dragOver
+                ? 'border-accent bg-accent-soft/40'
+                : 'border-border-default bg-surface-sunken hover:border-accent',
+            )}
+          >
+            <UploadCloud size={24} className="mb-2 text-text-tertiary" />
+            <p className="text-[13px] font-medium text-text-primary">
+              Drop files here or click to browse
+            </p>
+            <p className="mt-1 text-[11px] text-text-tertiary">
+              .pdf, .docx, .txt — up to 25 MB each
+            </p>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept={ACCEPT_ATTR}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) acceptFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </div>
+        </div>
+
+        {files.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {files.map((f, idx) => (
+              <div
+                key={`${f.name}-${idx}`}
+                className="flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText size={14} className="shrink-0 text-text-tertiary" />
+                  <span className="truncate text-[13px] text-text-primary">{f.name}</span>
+                  <span className="shrink-0 text-[11px] text-text-tertiary">
+                    {formatFileSize(f.size)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFile(idx)}
+                  aria-label={`Remove ${f.name}`}
+                  className="text-text-tertiary hover:text-error transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="secondary" size="sm" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={files.length === 0}
+          >
+            Upload {files.length > 0 ? `(${files.length})` : ''}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/* ─── Picker modal (reuse from existing KBs) ───────────────────────────── */
 
 interface PickerProps {
-  mode: PickerMode | null;
+  open: boolean;
   onClose: () => void;
   knowledgeBases: KnowledgeBase[];
   attachedIds: Set<string>;
   onPick: (kbId: string) => void;
 }
 
-function KBPickerModal({ mode, onClose, knowledgeBases, attachedIds, onPick }: PickerProps) {
+function KBPickerModal({ open, onClose, knowledgeBases, attachedIds, onPick }: PickerProps) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -296,10 +476,8 @@ function KBPickerModal({ mode, onClose, knowledgeBases, attachedIds, onPick }: P
     );
   }, [knowledgeBases, query]);
 
-  const title = mode === 'reuse' ? 'Reuse a knowledge source' : 'Add knowledge';
-
   return (
-    <Modal open={mode !== null} onClose={onClose} title={title} size="md">
+    <Modal open={open} onClose={onClose} title="Reuse a knowledge source" size="md">
       <Input
         placeholder="Search…"
         value={query}

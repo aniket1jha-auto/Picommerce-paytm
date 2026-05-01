@@ -50,11 +50,11 @@ function VoiceAdvancedStep({ config, onSave, onNext, onPrev }: Props) {
 
       <div className="space-y-6">
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-text-primary">LLM Configuration</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm font-semibold text-text-primary">Response style</h3>
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                Temperature: {temperature}
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Creativity: {temperature.toFixed(1)}
               </label>
               <input
                 type="range"
@@ -67,13 +67,17 @@ function VoiceAdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 data-testid="temperature-slider"
               />
               <div className="flex justify-between text-xs text-text-secondary mt-1">
-                <span>Precise</span>
+                <span>Predictable</span>
                 <span>Creative</span>
               </div>
+              <p className="mt-2 text-xs text-text-secondary">
+                Lower = sticks closer to the script. Higher = more variation in wording.
+                Recovery and KYC use-cases work best at 0.2&ndash;0.4.
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                Max Tokens: {maxTokens}
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Max response length: ~{Math.round(maxTokens * 0.75).toLocaleString()} words
               </label>
               <input
                 type="range"
@@ -86,9 +90,14 @@ function VoiceAdvancedStep({ config, onSave, onNext, onPrev }: Props) {
                 data-testid="max-tokens-slider"
               />
               <div className="flex justify-between text-xs text-text-secondary mt-1">
-                <span>512</span>
-                <span>4096</span>
+                <span>~380 words</span>
+                <span>~3,000 words</span>
               </div>
+              <p className="mt-2 text-xs text-text-secondary">
+                The longest single reply the agent can produce in one turn. Behind the scenes
+                this is measured in tokens &mdash; roughly 4 characters of English per token,
+                so 1,000 tokens &asymp; 750 words. Voice calls rarely need more than ~1,200.
+              </p>
             </div>
           </div>
         </div>

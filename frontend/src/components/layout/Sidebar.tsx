@@ -8,7 +8,7 @@ import {
   Users,
   Library,
   BarChart3,
-  Radio,
+  KeyRound,
   Plug2,
   Settings2,
   ChevronsLeft,
@@ -59,7 +59,7 @@ const navSections: NavSection[] = [
   {
     heading: 'CONFIGURE',
     items: [
-      { to: '/configure/channels', icon: Radio, label: 'Channels' },
+      { to: '/configure/channels', icon: KeyRound, label: 'Account Manager' },
       { to: '/configure/integrations', icon: Plug2, label: 'Integrations' },
       { to: '/configure/workspace', icon: Settings2, label: 'Workspace' },
     ],

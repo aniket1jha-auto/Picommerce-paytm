@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
 import { ChatTestPanel } from '@/components/agents/chat-builder/ChatTestPanel';
@@ -94,8 +93,6 @@ function ConfigurationSummary({ config }: { config: AgentConfiguration }) {
 }
 
 export function ReviewStep({ config, onPrev, onDeploy }: Props) {
-  const [environment, setEnvironment] = useState<'test' | 'production'>('test');
-
   const handleDeploy = () => {
     onDeploy();
   };
@@ -135,42 +132,6 @@ export function ReviewStep({ config, onPrev, onDeploy }: Props) {
             </div>
           </div>
         )}
-
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-3">
-            Deployment Environment
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setEnvironment('test')}
-              className={`rounded-lg border-2 p-4 text-left transition-all ${
-                environment === 'test'
-                  ? 'border-cyan bg-cyan/5'
-                  : 'border-[#E5E7EB] hover:border-cyan/50'
-              }`}
-              data-testid="env-test"
-            >
-              <div className="font-semibold text-text-primary mb-1">Test Environment</div>
-              <div className="text-xs text-text-secondary">
-                Safe for testing, limited to 100 calls/day
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setEnvironment('production')}
-              className={`rounded-lg border-2 p-4 text-left transition-all ${
-                environment === 'production'
-                  ? 'border-cyan bg-cyan/5'
-                  : 'border-[#E5E7EB] hover:border-cyan/50'
-              }`}
-              data-testid="env-production"
-            >
-              <div className="font-semibold text-text-primary mb-1">Production Environment</div>
-              <div className="text-xs text-text-secondary">Live deployment, full capacity</div>
-            </button>
-          </div>
-        </div>
 
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
           <div className="flex items-start gap-2">

@@ -8,16 +8,12 @@ export type IntegrationFilterTab =
   | 'crm'
   | 'telephony'
   | 'messaging'
-  | 'payments'
-  | 'productivity'
   | 'webhooks';
 
 export type IntegrationSectionId =
   | 'DATA SOURCES'
   | 'TELEPHONY'
   | 'MESSAGING'
-  | 'PAYMENTS & CONVERSIONS'
-  | 'PRODUCTIVITY'
   | 'DEVELOPER';
 
 /** Drives configuration fields in the drawer */
@@ -61,8 +57,6 @@ export const INTEGRATION_FILTER_TABS: { id: IntegrationFilterTab; label: string 
   { id: 'crm', label: 'CRM' },
   { id: 'telephony', label: 'Telephony' },
   { id: 'messaging', label: 'Messaging' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'productivity', label: 'Productivity' },
   { id: 'webhooks', label: 'Webhooks' },
 ];
 
@@ -228,46 +222,6 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
     hasCrmSyncSettings: false,
   },
   {
-    id: 'zentrunk',
-    name: 'Zentrunk',
-    initials: 'Zt',
-    brandColor: '#0EA5E9',
-    shortDescription: 'SIP trunking and inbound call handling',
-    categoryLabel: 'Telephony',
-    section: 'TELEPHONY',
-    filterTab: 'telephony',
-    configKind: 'api_zentrunk',
-    about:
-      'Connect SIP trunks for inbound DID routing and carrier-grade voice paths into Commerce voice agents.',
-    whatGetsSynced: [
-      'Trunk health and capacity',
-      'Inbound leg metadata',
-      'CDR summaries for reporting',
-    ],
-    usedBy: ['Channels', 'Agents'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'twilio',
-    name: 'Twilio',
-    initials: 'Tw',
-    brandColor: '#F22F46',
-    shortDescription: 'Voice and SMS delivery fallback',
-    categoryLabel: 'Telephony',
-    section: 'TELEPHONY',
-    filterTab: 'telephony',
-    configKind: 'api_twilio',
-    about:
-      'Use Twilio as a fallback carrier for SMS and voice when primary routes fail or for specific geographies.',
-    whatGetsSynced: [
-      'Delivery receipts',
-      'Voice call status callbacks',
-      'Usage by subaccount',
-    ],
-    usedBy: ['Channels', 'Campaigns'],
-    hasCrmSyncSettings: false,
-  },
-  {
     id: 'whatsapp',
     name: 'WhatsApp Business API (Meta)',
     initials: 'WA',
@@ -328,126 +282,6 @@ export const INTEGRATIONS: IntegrationDefinition[] = [
     hasCrmSyncSettings: false,
   },
   {
-    id: 'sendgrid',
-    name: 'SendGrid',
-    initials: 'SG',
-    brandColor: '#1A82E2',
-    shortDescription: 'Transactional and campaign email delivery',
-    categoryLabel: 'Email',
-    section: 'MESSAGING',
-    filterTab: 'messaging',
-    configKind: 'api_sendgrid',
-    about:
-      'Deliver email from Commerce campaigns with shared IP pools, suppression lists, and bounce handling.',
-    whatGetsSynced: [
-      'Delivery and bounce events',
-      'Spam report signals',
-      'API key usage',
-    ],
-    usedBy: ['Campaigns', 'Templates'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'razorpay',
-    name: 'Razorpay',
-    initials: 'Rz',
-    brandColor: '#3395FF',
-    shortDescription: 'Payment link generation and confirmation webhook ingestion',
-    categoryLabel: 'Payments',
-    section: 'PAYMENTS & CONVERSIONS',
-    filterTab: 'payments',
-    configKind: 'api_razorpay',
-    about:
-      'Generate payment links from journeys and ingest paid events to attribute conversions and update CRM.',
-    whatGetsSynced: [
-      'Payment captured events',
-      'Refund and dispute signals',
-      'Settlement references',
-    ],
-    usedBy: ['Campaigns', 'Analytics'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'custom_payment_webhook',
-    name: 'Custom Payment Webhook',
-    initials: 'CP',
-    brandColor: '#10B981',
-    shortDescription: 'Receive payment confirmation events from any payment provider',
-    categoryLabel: 'Payments',
-    section: 'PAYMENTS & CONVERSIONS',
-    filterTab: 'payments',
-    configKind: 'webhook_inbound',
-    about:
-      'Point any PSP webhook at Commerce to normalize payment success payloads into contact and campaign metrics.',
-    whatGetsSynced: [
-      'Signed webhook payloads',
-      'Mapped amount and currency',
-      'Order and customer references',
-    ],
-    usedBy: ['Analytics', 'Audiences'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'google_calendar',
-    name: 'Google Calendar',
-    initials: 'Gc',
-    brandColor: '#4285F4',
-    shortDescription: 'Appointment booking and availability check for voice agents',
-    categoryLabel: 'Productivity',
-    section: 'PRODUCTIVITY',
-    filterTab: 'productivity',
-    configKind: 'oauth',
-    about:
-      'Let AI agents check free/busy, book callbacks, and create events on behalf of reps.',
-    whatGetsSynced: [
-      'Calendar availability windows',
-      'Created events with conferencing links',
-      'Cancellation updates',
-    ],
-    usedBy: ['Agents', 'Tools'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    initials: 'Sl',
-    brandColor: '#4A154B',
-    shortDescription: 'Campaign alerts, performance notifications to Slack channels',
-    categoryLabel: 'Productivity',
-    section: 'PRODUCTIVITY',
-    filterTab: 'productivity',
-    configKind: 'api_slack',
-    about:
-      'Post campaign milestones, anomaly alerts, and daily digests to the channels your team already uses.',
-    whatGetsSynced: [
-      'Channel posting permissions',
-      'Workspace metadata',
-      'Bot token scopes',
-    ],
-    usedBy: ['Analytics', 'Campaigns'],
-    hasCrmSyncSettings: false,
-  },
-  {
-    id: 'google_sheets',
-    name: 'Google Sheets',
-    initials: 'Sh',
-    brandColor: '#0F9D58',
-    shortDescription: 'Export campaign reports and contact lists to Sheets',
-    categoryLabel: 'Productivity',
-    section: 'PRODUCTIVITY',
-    filterTab: 'productivity',
-    configKind: 'oauth',
-    about:
-      'Schedule exports of segment snapshots and campaign metrics to shared spreadsheets.',
-    whatGetsSynced: [
-      'Sheet tabs and named ranges',
-      'Append-only export rows',
-      'Share permissions via OAuth',
-    ],
-    usedBy: ['Reports', 'Audiences'],
-    hasCrmSyncSettings: false,
-  },
-  {
     id: 'outbound_webhooks',
     name: 'Outbound Webhooks',
     initials: 'Wh',
@@ -493,8 +327,6 @@ export const INTEGRATION_SECTION_ORDER: IntegrationSectionId[] = [
   'DATA SOURCES',
   'TELEPHONY',
   'MESSAGING',
-  'PAYMENTS & CONVERSIONS',
-  'PRODUCTIVITY',
   'DEVELOPER',
 ];
 

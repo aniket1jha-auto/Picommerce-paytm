@@ -11,7 +11,17 @@ interface KBState {
   setStatus: (id: string, status: KBStatus) => void;
   createKB: (
     input: Pick<KnowledgeBase, 'name' | 'description' | 'source'> &
-      Partial<Pick<KnowledgeBase, 'embeddingModel' | 'chunkSize' | 'chunkOverlap' | 'splitter'>>,
+      Partial<
+        Pick<
+          KnowledgeBase,
+          | 'embeddingModel'
+          | 'chunkSize'
+          | 'chunkOverlap'
+          | 'splitter'
+          | 'documentCount'
+          | 'chunkCount'
+        >
+      >,
   ) => KnowledgeBase;
   getKB: (id: string) => KnowledgeBase | undefined;
   getDocuments: (kbId: string) => KBDocument[];
@@ -37,8 +47,8 @@ export const useKnowledgeBaseStore = create<KBState>((set, get) => ({
       description: input.description,
       source: input.source,
       status: input.source === 'files' ? 'indexing' : 'empty',
-      documentCount: 0,
-      chunkCount: 0,
+      documentCount: input.documentCount ?? 0,
+      chunkCount: input.chunkCount ?? 0,
       tokenCount: 0,
       embeddingModel: input.embeddingModel ?? 'text-embedding-3-large',
       chunkSize: input.chunkSize ?? 512,

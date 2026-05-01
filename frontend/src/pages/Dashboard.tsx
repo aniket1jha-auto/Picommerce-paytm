@@ -1,4 +1,4 @@
-import { Megaphone } from 'lucide-react';
+import { Megaphone, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePhaseData } from '@/hooks/usePhaseData';
@@ -8,9 +8,10 @@ import { KPIBar } from '@/components/analytics/KPIBar';
 import { CampaignCard } from '@/components/campaign/CampaignCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ChannelIcon } from '@/components/common/ChannelIcon';
+import { AIRecommendationsPanel } from '@/components/analytics/AIRecommendations';
 import { formatCount, formatPercent } from '@/utils/format';
-import type { ChannelType } from '@/types';
 import { dashboardChannelPerf } from '@/data/mock/dashboard';
+import type { DashboardChannelKey } from '@/data/mock/dashboard';
 
 // Status sort order: active → scheduled → paused → draft → completed
 const STATUS_ORDER: Record<CampaignStatus, number> = {
@@ -30,17 +31,32 @@ function sortCampaigns(campaigns: Campaign[]): Campaign[] {
 // Channel performance sneak-peek data lives in mocks/dashboard.ts (Phase 1.8).
 const CHANNEL_PERF = dashboardChannelPerf;
 
-const CHANNEL_NAMES: Record<ChannelType, string> = {
+const CHANNEL_NAMES: Record<DashboardChannelKey, string> = {
   sms: 'SMS',
   whatsapp: 'WhatsApp',
   rcs: 'RCS',
   ai_voice: 'AI Voice',
+  email: 'Email',
   field_executive: 'Field Exec',
   push_notification: 'Push',
   in_app_banner: 'In-App',
   facebook_ads: 'FB Ads',
   instagram_ads: 'IG Ads',
 };
+
+function ChannelGlyph({ channel, size = 14 }: { channel: DashboardChannelKey; size?: number }) {
+  if (channel === 'email') {
+    return (
+      <div
+        className="inline-flex items-center justify-center rounded-md"
+        style={{ width: size + 12, height: size + 12, backgroundColor: '#0F766E1A' }}
+      >
+        <Mail size={size} style={{ color: '#0F766E' }} />
+      </div>
+    );
+  }
+  return <ChannelIcon channel={channel} size={size} />;
+}
 
 function ChannelPerfSneak() {
   const maxConvRate = Math.max(...CHANNEL_PERF.map((c) => (c.converted / c.sent) * 100));
@@ -63,7 +79,7 @@ function ChannelPerfSneak() {
               className="rounded-lg bg-white px-3.5 py-3 ring-1 ring-[#E5E7EB]"
             >
               <div className="flex items-center gap-2 mb-2">
-                <ChannelIcon channel={ch.channel} size={14} />
+                <ChannelGlyph channel={ch.channel} size={14} />
                 <span className="text-xs font-semibold text-text-primary">{CHANNEL_NAMES[ch.channel]}</span>
               </div>
               <div className="flex items-end justify-between mb-1.5">
@@ -107,7 +123,7 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page header — campaign creation lives in BUILD → Campaigns; not duplicated here. */}
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Welcome back!" />
 
       {/* KPI bar */}
       <KPIBar />
@@ -126,7 +142,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-text-primary">
-                Active Campaigns
+                Recent Campaigns
               </h2>
               {hasCampaigns && (
                 <Link
@@ -181,6 +197,14 @@ export function Dashboard() {
 
           {/* Channel Performance sneak-peek — Day 30+ only */}
           {isDay30 && <ChannelPerfSneak />}
+
+          {/* Suggested for You — AI recommendations (Day 30+ only) */}
+          {isDay30 && (
+            <div className="flex flex-col gap-3">
+              <h2 className="text-sm font-semibold text-text-primary">Suggested for You</h2>
+              <AIRecommendationsPanel scope="all" />
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
