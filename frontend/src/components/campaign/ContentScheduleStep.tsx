@@ -676,6 +676,8 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
   const [expandedChannel, setExpandedChannel] = useState<ChannelType | null>(null);
   const [scrollToSenderChannel, setScrollToSenderChannel] = useState<ChannelType | null>(null);
   const [smartPlanNotice, setSmartPlanNotice] = useState<string | null>(null);
+  const [smartPlanExpandedId, setSmartPlanExpandedId] = useState<string | null>(null);
+  const [smartPlanEditingId, setSmartPlanEditingId] = useState<string | null>(null);
   const [webhookTestOpen, setWebhookTestOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -809,6 +811,19 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
     const raw = (campaignData.waterfallConfig as Record<string, unknown> | undefined)?.subSegments;
     return Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : null;
   }, [campaignData.waterfallConfig]);
+
+  function updateSmartPlanSubSegment(id: string, patch: Record<string, unknown>) {
+    if (!smartPlanSubSegments) return;
+    const next = smartPlanSubSegments.map((ss) =>
+      String(ss.id) === id ? { ...ss, ...patch } : ss,
+    );
+    onUpdate({
+      waterfallConfig: {
+        ...(campaignData.waterfallConfig as Record<string, unknown>),
+        subSegments: next,
+      },
+    });
+  }
 
   function ScheduleModeCard({
     id,
@@ -1826,47 +1841,25 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
               <div className="divide-y divide-[#E5E7EB]">
                 {smartPlanSubSegments.slice(0, 8).map((ss) => {
                   const id = String(ss.id ?? '');
-                  const name = String(ss.name ?? 'Sub-segment');
-                  const reason = String(ss.reason ?? '');
-                  const userCount = Number(ss.userCount ?? 0);
-                  const percentage = Number(ss.percentage ?? 0);
-                  const estimatedCost = Number(ss.estimatedCost ?? 0);
-                  const primaryChannel = (ss.primaryChannel as ChannelType | undefined) ?? 'sms';
-                  const tags = Array.isArray(ss.tags) ? (ss.tags as unknown[]).map((t) => String(t)) : [];
-
+                  const isExpanded = smartPlanExpandedId === id;
+                  const isEditing = smartPlanEditingId === id;
                   return (
-                    <div key={id} className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-text-primary">{name}</p>
-                          <p className="mt-0.5 truncate text-xs text-text-secondary">{reason}</p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs font-semibold text-text-primary">
-                            {userCount.toLocaleString('en-IN')} users · {percentage ? `${percentage}%` : '—'}
-                          </p>
-                          <p className="mt-0.5 text-xs text-text-secondary">₹{estimatedCost.toFixed(0)}</p>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#FAFAFA] px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
-                          <ChannelIcon channel={primaryChannel} size={12} />
-                          {primaryChannel === 'ai_voice'
-                            ? 'AI Voice'
-                            : primaryChannel === 'whatsapp'
-                              ? 'WhatsApp'
-                              : String(primaryChannel).toUpperCase()}
-                        </span>
-                        {tags.slice(0, 3).map((t) => (
-                          <span
-                            key={t}
-                            className="rounded-full border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-medium text-text-secondary"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                    <SmartPlanSubSegmentRow
+                      key={id}
+                      ss={ss}
+                      expanded={isExpanded}
+                      editing={isEditing}
+                      availableChannels={contentChannels.map((c) => c.id)}
+                      onToggleExpand={() => {
+                        setSmartPlanExpandedId(isExpanded ? null : id);
+                        if (isExpanded) setSmartPlanEditingId(null);
+                      }}
+                      onToggleEdit={() => {
+                        if (!isExpanded) setSmartPlanExpandedId(id);
+                        setSmartPlanEditingId(isEditing ? null : id);
+                      }}
+                      onPatch={(patch) => updateSmartPlanSubSegment(id, patch)}
+                    />
                   );
                 })}
 
@@ -2423,6 +2416,272 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Smart-plan sub-segment row (expandable + editable) ───────────────────────
+
+const TIMING_OPTIONS = [
+  'Send immediately',
+  '9–11 AM IST',
+  '11 AM–2 PM IST',
+  '2–5 PM IST',
+  '5–9 PM IST',
+  'Sat–Sun, 11 AM–6 PM',
+];
+
+const FALLBACK_WAIT_OPTIONS = ['12h', '24h', '48h', '72h', '96h'];
+
+function channelDisplayName(ch: string): string {
+  if (ch === 'ai_voice') return 'AI Voice';
+  if (ch === 'whatsapp') return 'WhatsApp';
+  return String(ch).toUpperCase();
+}
+
+interface SmartPlanRowProps {
+  ss: Record<string, unknown>;
+  expanded: boolean;
+  editing: boolean;
+  availableChannels: ChannelType[];
+  onToggleExpand: () => void;
+  onToggleEdit: () => void;
+  onPatch: (patch: Record<string, unknown>) => void;
+}
+
+function SmartPlanSubSegmentRow({
+  ss,
+  expanded,
+  editing,
+  availableChannels,
+  onToggleExpand,
+  onToggleEdit,
+  onPatch,
+}: SmartPlanRowProps) {
+  const name = String(ss.name ?? 'Sub-segment');
+  const reason = String(ss.reason ?? '');
+  const userCount = Number(ss.userCount ?? 0);
+  const percentage = Number(ss.percentage ?? 0);
+  const estimatedCost = Number(ss.estimatedCost ?? 0);
+  const primaryChannel = (ss.primaryChannel as ChannelType | undefined) ?? 'sms';
+  const tags = Array.isArray(ss.tags) ? (ss.tags as unknown[]).map((t) => String(t)) : [];
+  const journey = Array.isArray(ss.journey) ? (ss.journey as Array<Record<string, unknown>>) : [];
+  const fallbackStep = journey[1];
+  const fallbackChannel = fallbackStep
+    ? (String(fallbackStep.channelId) as ChannelType)
+    : null;
+  const primaryWait = journey[0] ? String(journey[0].waitDuration ?? '—') : '—';
+  const timing = typeof ss.timing === 'string' ? (ss.timing as string) : '—';
+  const conversionPct = typeof ss.conversionPct === 'number' ? (ss.conversionPct as number) : null;
+
+  const isCustomTiming = typeof ss.timing === 'string' && !TIMING_OPTIONS.includes(ss.timing as string);
+
+  function patchPrimaryChannel(next: ChannelType) {
+    const updatedJourney = journey.length > 0
+      ? journey.map((step, idx) => (idx === 0 ? { ...step, channelId: next } : step))
+      : [{ channelId: next, waitDuration: '48h', triggerCondition: 'no_response', maxRetries: 1, retryGap: '6h' }];
+    onPatch({ primaryChannel: next, journey: updatedJourney });
+  }
+
+  function patchFallbackChannel(next: ChannelType) {
+    if (journey.length === 0) return;
+    const updated = journey.length === 1
+      ? [...journey, { channelId: next, waitDuration: '48h', triggerCondition: 'no_response', maxRetries: 1, retryGap: '6h' }]
+      : journey.map((step, idx) => (idx === 1 ? { ...step, channelId: next } : step));
+    onPatch({ journey: updated });
+  }
+
+  function patchPrimaryWait(next: string) {
+    if (journey.length === 0) return;
+    const updated = journey.map((step, idx) => (idx === 0 ? { ...step, waitDuration: next } : step));
+    onPatch({ journey: updated });
+  }
+
+  return (
+    <div className="px-4 py-3">
+      {/* Header — always visible */}
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <ChevronDown
+            size={14}
+            className={[
+              'shrink-0 text-text-secondary transition-transform',
+              expanded ? 'rotate-0' : '-rotate-90',
+            ].join(' ')}
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-text-primary">{name}</p>
+            <p className="mt-0.5 truncate text-xs text-text-secondary">{reason}</p>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-xs font-semibold text-text-primary">
+            {userCount.toLocaleString('en-IN')} users · {percentage ? `${percentage}%` : '—'}
+          </p>
+          <p className="mt-0.5 text-xs text-text-secondary">₹{estimatedCost.toFixed(0)}</p>
+        </div>
+      </button>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-[#FAFAFA] px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
+          <ChannelIcon channel={primaryChannel} size={12} />
+          {channelDisplayName(primaryChannel)}
+        </span>
+        {tags.slice(0, 3).map((t) => (
+          <span
+            key={t}
+            className="rounded-full border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-medium text-text-secondary"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div className="mt-3 flex flex-col gap-3">
+          {/* Edit toggle */}
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={onToggleEdit}
+              className={[
+                'inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+                editing
+                  ? 'border-cyan/40 bg-cyan/10 text-cyan'
+                  : 'border-[#E5E7EB] bg-white text-text-secondary hover:border-[#D1D5DB] hover:text-text-primary',
+              ].join(' ')}
+            >
+              {editing ? 'Done' : 'Edit'}
+            </button>
+          </div>
+
+          {/* Details grid */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-[#E5E7EB] bg-white p-3 sm:grid-cols-3">
+            <SmartPlanDetail label="Sub-cohort" value={name} />
+            <SmartPlanDetail
+              label="Size"
+              value={`${userCount.toLocaleString('en-IN')} · ${percentage ? `${percentage}%` : '—'}`}
+            />
+            <SmartPlanDetail
+              label="Primary channel"
+              value={
+                editing ? (
+                  <select
+                    value={primaryChannel}
+                    onChange={(e) => patchPrimaryChannel(e.target.value as ChannelType)}
+                    className="w-full rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  >
+                    {availableChannels.map((ch) => (
+                      <option key={ch} value={ch}>
+                        {channelDisplayName(ch)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ChannelIcon channel={primaryChannel} size={12} />
+                    {channelDisplayName(primaryChannel)}
+                  </span>
+                )
+              }
+            />
+            <SmartPlanDetail
+              label="Timing"
+              value={
+                editing ? (
+                  <select
+                    value={isCustomTiming ? '__custom' : timing}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom') return;
+                      onPatch({ timing: e.target.value });
+                    }}
+                    className="w-full rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  >
+                    {isCustomTiming && <option value="__custom">{timing}</option>}
+                    {TIMING_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  timing
+                )
+              }
+            />
+            <SmartPlanDetail
+              label="Fallback channel"
+              value={
+                editing ? (
+                  <select
+                    value={fallbackChannel ?? ''}
+                    onChange={(e) => patchFallbackChannel(e.target.value as ChannelType)}
+                    disabled={journey.length === 0}
+                    className="w-full rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+                  >
+                    {!fallbackChannel && <option value="">None</option>}
+                    {availableChannels
+                      .filter((ch) => ch !== primaryChannel)
+                      .map((ch) => (
+                        <option key={ch} value={ch}>
+                          {channelDisplayName(ch)}
+                        </option>
+                      ))}
+                  </select>
+                ) : fallbackChannel ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ChannelIcon channel={fallbackChannel} size={12} />
+                    {channelDisplayName(fallbackChannel)} after {primaryWait}
+                  </span>
+                ) : (
+                  'None'
+                )
+              }
+            />
+            <SmartPlanDetail
+              label={fallbackChannel ? 'Wait before fallback' : 'Wait'}
+              value={
+                editing ? (
+                  <select
+                    value={primaryWait}
+                    onChange={(e) => patchPrimaryWait(e.target.value)}
+                    disabled={journey.length === 0}
+                    className="w-full rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+                  >
+                    {FALLBACK_WAIT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  primaryWait
+                )
+              }
+            />
+            <SmartPlanDetail
+              label="Conversion (est.)"
+              value={conversionPct !== null && conversionPct > 0 ? `${conversionPct.toFixed(1)}%` : '—'}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SmartPlanDetail({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+        {label}
+      </span>
+      <span className="truncate text-xs font-medium text-text-primary">{value}</span>
     </div>
   );
 }

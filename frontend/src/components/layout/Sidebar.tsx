@@ -8,14 +8,9 @@ import {
   Wrench,
   Users,
   Library,
-  Activity,
-  PhoneCall,
   BarChart3,
-  FileText,
   Radio,
   Plug2,
-  UserCog,
-  ScrollText,
   Settings2,
   ChevronsLeft,
   ChevronsRight,
@@ -60,10 +55,7 @@ const navSections: NavSection[] = [
   {
     heading: 'OBSERVE',
     items: [
-      { to: '/monitoring', icon: Activity, label: 'Performance' },
-      { to: '/monitoring/calls', icon: PhoneCall, label: 'Call Logs' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-      { to: '/reports', icon: FileText, label: 'Reports' },
     ],
   },
   {
@@ -71,8 +63,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/configure/channels', icon: Radio, label: 'Channels' },
       { to: '/configure/integrations', icon: Plug2, label: 'Integrations' },
-      { to: '/configure/team', icon: UserCog, label: 'Team & Roles' },
-      { to: '/configure/audit-log', icon: ScrollText, label: 'Audit Log' },
       { to: '/configure/workspace', icon: Settings2, label: 'Workspace' },
     ],
   },

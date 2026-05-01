@@ -728,16 +728,6 @@ export function AudienceStep({ campaignData, onUpdate }: AudienceStepProps) {
         </div>
       )}
 
-      {/* High Value Users — for selected segments */}
-      {mode === 'segment' && selectedSegment && (
-        <HighIntentSection
-          segmentSize={selectedSegment.size}
-          eventName={campaignData.goal.goals[0]?.eventName ?? ''}
-          highIntent={campaignData.highIntent}
-          onChange={(updated) => onUpdate({ highIntent: updated })}
-        />
-      )}
-
       {/* AI insights */}
       {insights.length > 0 && (
         <div className="flex flex-col gap-2">

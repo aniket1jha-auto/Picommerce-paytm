@@ -26,9 +26,9 @@ const RAIL_ICONS: RailIcon[] = [
 
 /** Map a category id to one of the existing PALETTE_GROUPS titles. */
 const CATEGORY_TO_GROUP: Record<Exclude<PaletteCategoryId, 'templates'>, string> = {
-  messaging: 'Messaging nodes',
-  agents: 'Agent nodes',
-  logic: 'Logic & flow',
+  messaging: 'Messages',
+  agents: 'AI Agents',
+  logic: 'Logic',
 };
 
 interface JourneyPaletteDrawerProps {

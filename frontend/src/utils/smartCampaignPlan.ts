@@ -13,6 +13,10 @@ export interface SmartSubSegment {
   estimatedCost: number;
   group: string;
   reason: string;
+  /** Window when the sequence runs (e.g. "9-11 AM IST"). */
+  timing?: string;
+  /** Estimated conversion rate (0-100). */
+  conversionPct?: number;
 }
 
 function getChannelName(channelId: ChannelType): string {
@@ -68,6 +72,8 @@ export function generateSmartSubSegments(params: {
       group: 'high-value',
       reason:
         'High LTV, WhatsApp reachable, accelerated sequence to maximise reach',
+      timing: 'Send immediately',
+      conversionPct: 12.4,
     },
     {
       id: 'ss-2',
@@ -83,6 +89,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'whatsapp-first',
       reason: 'WhatsApp reachable, peak engagement 9–11 AM, 6.8% conversion',
+      timing: '9–11 AM IST',
+      conversionPct: 6.8,
     },
     {
       id: 'ss-3',
@@ -98,6 +106,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'sms-first',
       reason: 'No WhatsApp or app, SMS-only reachable, AI Voice fallback',
+      timing: '10 AM–7 PM IST',
+      conversionPct: 3.8,
     },
     {
       id: 'ss-4',
@@ -113,6 +123,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'whatsapp-first',
       reason: 'WhatsApp reachable, peak engagement 5–9 PM, evening delivery',
+      timing: '5–9 PM IST',
+      conversionPct: 5.9,
     },
     {
       id: 'ss-5',
@@ -128,6 +140,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'whatsapp-first',
       reason: 'Weekend active, has app, push as cheaper fallback before SMS',
+      timing: 'Sat–Sun, 11 AM–6 PM',
+      conversionPct: 5.2,
     },
     {
       id: 'ss-6',
@@ -143,6 +157,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'sms-first',
       reason: 'Tier 3 cities, slower response patterns, cost-efficient 2-step sequence',
+      timing: '11 AM–6 PM IST',
+      conversionPct: 3.1,
     },
     {
       id: 'ss-7',
@@ -158,6 +174,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: 0,
       group: 'voice-first',
       reason: 'Phone-only reachable, AI Voice primary, SMS follow-up',
+      timing: '11 AM–7 PM IST',
+      conversionPct: 8.5,
     },
   ];
 
@@ -215,6 +233,8 @@ export function generateSmartSubSegments(params: {
       estimatedCost: computeJourneyCost(journey, count),
       group: 'high-value',
       reason: 'High-value users identified from your criteria. Multi-channel accelerated sequence.',
+      timing: 'Send immediately',
+      conversionPct: 11.0,
     });
   }
 
@@ -248,6 +268,8 @@ export function generateSmartSubSegments(params: {
         estimatedCost: computeJourneyCost(journey, morning),
         group: groupKey,
         reason: `Users reachable on ${chName} with higher morning engagement. ${chName} primary; fallbacks: ${fallbacks.slice(0, 2).map(getChannelName).join(', ')}.`,
+        timing: '9–11 AM IST',
+        conversionPct: 6.0,
       });
     }
     if (evening > 0) {
@@ -263,6 +285,8 @@ export function generateSmartSubSegments(params: {
         estimatedCost: computeJourneyCost(journey, evening),
         group: groupKey,
         reason: `Users reachable on ${chName} with higher evening engagement. ${chName} primary; fallbacks: ${fallbacks.slice(0, 2).map(getChannelName).join(', ')}.`,
+        timing: '5–9 PM IST',
+        conversionPct: 5.5,
       });
     }
   });

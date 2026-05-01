@@ -503,7 +503,7 @@ function JourneyBuilderCanvas({
     <div className="relative flex h-full flex-col bg-canvas">
       {/* Canvas region — relative anchor for absolute overlays (palette, controls, panel, starter) */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <div className="relative flex-1 min-w-0 journey-flow-surface">
+        <div className="relative flex-1 min-w-0 overflow-hidden journey-flow-surface">
           <ReactFlow
             nodes={journey.nodes}
             edges={decoratedEdges}

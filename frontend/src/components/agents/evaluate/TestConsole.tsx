@@ -56,13 +56,11 @@ export function TestConsole({ agent }: Props) {
           />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-text-primary">Live Test Console</div>
-            <div className="text-[11px] text-text-secondary truncate">
-              {player.status === 'idle'
-                ? `Will play: "${script.label}" · ${script.turns.length} turns · scripted demo`
-                : player.status === 'running'
-                ? 'Test call in progress'
-                : 'Test call ended'}
-            </div>
+            {player.status !== 'idle' && (
+              <div className="text-[11px] text-text-secondary truncate">
+                {player.status === 'running' ? 'Test call in progress' : 'Test call ended'}
+              </div>
+            )}
           </div>
         </div>
         <TopActions player={player} />
@@ -111,11 +109,7 @@ function TopActions({ player }: { player: ReturnType<typeof useTestCallPlayer> }
       </Button>
     );
   }
-  return (
-    <Button variant="primary" size="sm" iconLeft={<Play size={12} />} onClick={player.start}>
-      Start test call
-    </Button>
-  );
+  return null;
 }
 
 /* ─── Idle ─────────────────────────────────────────────────────────────── */
@@ -132,16 +126,12 @@ function IdleView({ onStart }: { onStart: () => void }) {
       <div className="text-center max-w-md">
         <h3 className="text-[15px] font-semibold text-text-primary">Talk to the agent</h3>
         <p className="mt-1 text-[13px] text-text-secondary">
-          Plays a scripted Paytm-themed conversation. Watch the right pane to see
-          per-turn latency, knowledge-base retrievals, and tool calls as they happen.
+          See per-turn latency, knowledge-base retrievals, and tool calls as they happen.
         </p>
       </div>
       <Button variant="primary" iconLeft={<Play size={14} />} onClick={onStart}>
         Start test call
       </Button>
-      <p className="text-[11px] text-text-tertiary">
-        v1: scripted playback. Real microphone &amp; LLM in a later phase.
-      </p>
     </div>
   );
 }

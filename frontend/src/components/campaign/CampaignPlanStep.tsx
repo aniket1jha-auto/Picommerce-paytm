@@ -38,6 +38,10 @@ interface SubSegment {
   estimatedCost: number;
   group: string;
   reason: string; // why this sub-segment was created
+  /** Window when the sequence runs (e.g. "9-11 AM IST"). Used in the details strip. */
+  timing?: string;
+  /** Estimated conversion rate (0-100). Used in the details strip. */
+  conversionPct?: number;
 }
 
 interface CampaignPlanStepProps {
@@ -155,6 +159,8 @@ function computeSubSegments(
         estimatedCost: Math.round(142000 * scale),
         group: 'high-value',
         reason: 'High LTV, WhatsApp reachable, accelerated sequence to maximise reach',
+        timing: 'Send immediately',
+        conversionPct: 12.4,
       },
       {
         id: 'ss-2',
@@ -171,6 +177,8 @@ function computeSubSegments(
         estimatedCost: Math.round(68000 * scale),
         group: 'whatsapp-first',
         reason: 'WhatsApp reachable, peak engagement 9\u201311 AM, 6.8% conversion',
+        timing: '9\u201311 AM IST',
+        conversionPct: 6.8,
       },
       {
         id: 'ss-3',
@@ -187,6 +195,8 @@ function computeSubSegments(
         estimatedCost: Math.round(48000 * scale),
         group: 'whatsapp-first',
         reason: 'WhatsApp reachable, peak engagement 5\u20139 PM, evening delivery',
+        timing: '5\u20139 PM IST',
+        conversionPct: 5.9,
       },
       {
         id: 'ss-4',
@@ -203,6 +213,8 @@ function computeSubSegments(
         estimatedCost: Math.round(35000 * scale),
         group: 'whatsapp-first',
         reason: 'Weekend active, has app, push as cheaper fallback before SMS',
+        timing: 'Sat–Sun, 11 AM–6 PM',
+        conversionPct: 5.2,
       },
       {
         id: 'ss-5',
@@ -219,6 +231,8 @@ function computeSubSegments(
         estimatedCost: Math.round(42000 * scale),
         group: 'push-first',
         reason: 'No WhatsApp, has app, push-first (5x cheaper than SMS)',
+        timing: '10 AM–8 PM IST',
+        conversionPct: 4.1,
       },
       {
         id: 'ss-6',
@@ -234,6 +248,8 @@ function computeSubSegments(
         estimatedCost: Math.round(38000 * scale),
         group: 'sms-first',
         reason: 'No WhatsApp or app, SMS-only reachable, AI Voice fallback',
+        timing: '10 AM–7 PM IST',
+        conversionPct: 3.8,
       },
       {
         id: 'ss-7',
@@ -249,6 +265,8 @@ function computeSubSegments(
         estimatedCost: Math.round(26000 * scale),
         group: 'sms-first',
         reason: 'Tier 3 cities, slower response patterns, cost-efficient 2-step sequence',
+        timing: '11 AM–6 PM IST',
+        conversionPct: 3.1,
       },
       {
         id: 'ss-8',
@@ -264,6 +282,8 @@ function computeSubSegments(
         estimatedCost: Math.round(22000 * scale),
         group: 'voice-first',
         reason: 'Phone-only reachable, AI Voice primary (8.5% conv), SMS follow-up',
+        timing: '11 AM–7 PM IST',
+        conversionPct: 8.5,
       },
     ];
 
@@ -389,6 +409,8 @@ function computeSubSegments(
         estimatedCost: computeJourneyCost(morningJourney, morning),
         group: groupKey,
         reason: `Users reachable on ${chName} who historically engage most in morning hours (9-11 AM). ${chName} used as primary channel, with ${fallbacks.slice(0, 2).map((c) => getChannelName(c)).join(' and ')} as fallbacks.`,
+        timing: '9–11 AM IST',
+        conversionPct: 6.0,
       });
     }
 
@@ -404,11 +426,101 @@ function computeSubSegments(
         estimatedCost: computeJourneyCost(eveningJourney, evening),
         group: groupKey,
         reason: `Users reachable on ${chName} who historically engage most in evening hours (5-9 PM). Same channel sequence as morning group but messages scheduled for evening delivery.`,
+        timing: '5–9 PM IST',
+        conversionPct: 5.5,
       });
     }
   });
 
   return segments;
+}
+
+// ─── Sub-cohort details strip (read-only summary + editable timing) ─────────
+
+interface SubCohortDetailsProps {
+  ss: SubSegment;
+  editable: boolean;
+  onTimingChange: (timing: string) => void;
+}
+
+const TIMING_OPTIONS = [
+  'Send immediately',
+  '9–11 AM IST',
+  '11 AM–2 PM IST',
+  '2–5 PM IST',
+  '5–9 PM IST',
+  'Sat–Sun, 11 AM–6 PM',
+];
+
+function SubCohortDetails({ ss, editable, onTimingChange }: SubCohortDetailsProps) {
+  const fallback = ss.journey[1];
+  const primaryStep = ss.journey[0];
+  const fallbackLabel = fallback
+    ? `${getChannelName(fallback.channelId)} after ${primaryStep?.waitDuration ?? '—'}`
+    : 'None';
+  const conv = ss.conversionPct ?? 0;
+  const timing = ss.timing ?? '—';
+  const isCustomTiming = ss.timing && !TIMING_OPTIONS.includes(ss.timing);
+
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-lg border border-[#E5E7EB] bg-white p-3 sm:grid-cols-3">
+      <DetailField label="Sub-cohort" value={ss.name} />
+      <DetailField
+        label="Size"
+        value={`${ss.userCount.toLocaleString('en-IN')} · ${ss.percentage}%`}
+      />
+      <DetailField
+        label="Primary channel"
+        value={
+          <span className="inline-flex items-center gap-1.5 text-text-primary">
+            <ChannelIcon channel={ss.primaryChannel} size={12} />
+            {getChannelName(ss.primaryChannel)}
+          </span>
+        }
+      />
+      <DetailField
+        label="Timing"
+        value={
+          editable ? (
+            <select
+              value={isCustomTiming ? '__custom' : ss.timing ?? ''}
+              onChange={(e) => {
+                if (e.target.value === '__custom') return;
+                onTimingChange(e.target.value);
+              }}
+              className="w-full rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            >
+              {!ss.timing && <option value="">Select timing…</option>}
+              {isCustomTiming && <option value="__custom">{ss.timing}</option>}
+              {TIMING_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            timing
+          )
+        }
+      />
+      <DetailField label="Fallback" value={fallbackLabel} />
+      <DetailField
+        label="Conversion (est.)"
+        value={conv > 0 ? `${conv.toFixed(1)}%` : '—'}
+      />
+    </div>
+  );
+}
+
+function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+        {label}
+      </span>
+      <span className="truncate text-xs font-medium text-text-primary">{value}</span>
+    </div>
+  );
 }
 
 // ─── Journey Summary (inline chips) ──────────────────────────────────────────
@@ -772,6 +884,7 @@ interface SubSegmentRowProps {
   onEditToggle: () => void;
   availableChannels: ChannelType[];
   onJourneyChange: (journey: WaterfallStep[]) => void;
+  onTimingChange: (timing: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }
@@ -783,6 +896,7 @@ function SubSegmentRow({
   onEditToggle,
   availableChannels,
   onJourneyChange,
+  onTimingChange,
   onDuplicate,
   onDelete,
 }: SubSegmentRowProps) {
@@ -861,6 +975,15 @@ function SubSegmentRow({
                   </button>
                   <ThreeDotMenu onEdit={onEditToggle} onDuplicate={onDuplicate} onDelete={onDelete} />
                 </div>
+              </div>
+
+              {/* Sub-cohort details strip */}
+              <div className="mt-3">
+                <SubCohortDetails
+                  ss={ss}
+                  editable={viewMode === 'edit'}
+                  onTimingChange={onTimingChange}
+                />
               </div>
 
               {/* Journey detail or editor */}
@@ -1105,6 +1228,12 @@ export function CampaignPlanStep({ campaignData, onUpdate }: CampaignPlanStepPro
     );
   }
 
+  function handleTimingChange(id: string, timing: string) {
+    setSubSegments((prev) =>
+      prev.map((ss) => (ss.id === id ? { ...ss, timing } : ss)),
+    );
+  }
+
   function handleDuplicate(ss: SubSegment) {
     const newSs: SubSegment = {
       ...ss,
@@ -1296,6 +1425,7 @@ export function CampaignPlanStep({ campaignData, onUpdate }: CampaignPlanStepPro
                 onEditToggle={() => toggleEditMode(ss.id)}
                 availableChannels={selectedChannels.length > 0 ? selectedChannels : ALL_CHANNELS.map((c) => c.id)}
                 onJourneyChange={(journey) => handleJourneyChange(ss.id, journey)}
+                onTimingChange={(timing) => handleTimingChange(ss.id, timing)}
                 onDuplicate={() => handleDuplicate(ss)}
                 onDelete={() => handleDelete(ss.id)}
               />
