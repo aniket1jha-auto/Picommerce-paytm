@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Check, Play, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
 import { ChatTestPanel } from '@/components/agents/chat-builder/ChatTestPanel';
+import { TestConsole } from '@/components/agents/evaluate/TestConsole';
 import { chatChannelLabel, chatUseCaseLabel } from '@/data/chatAgentConstants';
 
 interface Props {
@@ -94,16 +95,6 @@ function ConfigurationSummary({ config }: { config: AgentConfiguration }) {
 
 export function ReviewStep({ config, onPrev, onDeploy }: Props) {
   const [environment, setEnvironment] = useState<'test' | 'production'>('test');
-  const [showTestConsole, setShowTestConsole] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-
-  const handleTest = () => {
-    setIsTesting(true);
-    setTimeout(() => {
-      setIsTesting(false);
-      setShowTestConsole(true);
-    }, 2000);
-  };
 
   const handleDeploy = () => {
     onDeploy();
@@ -133,65 +124,16 @@ export function ReviewStep({ config, onPrev, onDeploy }: Props) {
             </div>
           </div>
         ) : (
-          <>
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
             <ConfigurationSummary config={config} />
-
-            <div className="rounded-lg bg-gradient-to-br from-cyan/5 to-cyan/10 border border-cyan/20 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary mb-1">Test Your Agent</h3>
-                  <p className="text-xs text-text-secondary">
-                    Make a test call to experience how your agent sounds and behaves
-                  </p>
-                </div>
-                <button
-                  onClick={handleTest}
-                  disabled={isTesting}
-                  className="inline-flex items-center gap-2 rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan/90 disabled:opacity-50"
-                  data-testid="test-agent-btn"
-                >
-                  {isTesting ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <Play size={16} />
-                      Start Test Call
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {showTestConsole && (
-                <div className="rounded-lg bg-white p-4 border border-cyan/30">
-                  <div className="flex items-start gap-3 mb-3">
-                    <Check size={20} className="text-green-600 mt-0.5" />
-                    <div>
-                      <div className="text-sm font-medium text-text-primary mb-1">
-                        Test call completed successfully
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        Duration: 45 seconds • Latency: 380ms • Voice: {config.voice}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-text-secondary bg-gray-50 p-3 rounded font-mono">
-                    Agent: &quot;Hi, this is {config.personality.role}. How can I help you
-                    today?&quot;
-                    <br />
-                    User: &quot;I&apos;d like to learn more about your product.&quot;
-                    <br />
-                    Agent: &quot;I&apos;d be happy to help! Could you tell me a bit about what
-                    you&apos;re looking for?&quot;
-                    <br />
-                    ...
-                  </div>
-                </div>
-              )}
+            <div className="flex min-h-0 flex-col gap-2">
+              <h3 className="text-sm font-semibold text-text-primary">Test your agent</h3>
+              <p className="text-xs text-text-secondary">
+                Start a test call to hear how the agent responds turn by turn
+              </p>
+              <TestConsole useCase={config.useCase} seed={config.name || 'review'} />
             </div>
-          </>
+          </div>
         )}
 
         <div>

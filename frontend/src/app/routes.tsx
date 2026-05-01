@@ -13,8 +13,6 @@ import { AgentBuilder } from '@/pages/AgentBuilder';
 import { ChatAgentBuilder } from '@/pages/ChatAgentBuilder';
 import { AgentDetail } from '@/pages/AgentDetail';
 
-import { KnowledgeBases } from '@/pages/KnowledgeBases';
-import { KnowledgeBaseDetail } from '@/pages/KnowledgeBaseDetail';
 import { Tools } from '@/pages/Tools';
 
 import { Audiences } from '@/pages/Audiences';
@@ -63,10 +61,6 @@ export function AppRoutes() {
       <Route path="/agents/new/chat" element={<ChatAgentBuilder />} />
       <Route path="/agents/:id/edit" element={<AgentBuilder mode="edit" />} />
       <Route path="/agents/:id" element={<AgentDetail />} />
-
-      {/* BUILD — Knowledge Bases (Phase 2) */}
-      <Route path="/knowledge-bases" element={<KnowledgeBases />} />
-      <Route path="/knowledge-bases/:id" element={<KnowledgeBaseDetail />} />
 
       {/* BUILD — Tools */}
       <Route path="/tools" element={<Tools />} />

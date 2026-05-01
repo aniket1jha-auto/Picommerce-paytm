@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Megaphone,
   Bot,
-  BookOpen,
   Wrench,
   Users,
   Library,
@@ -46,7 +45,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
       { to: '/agents', icon: Bot, label: 'Agents' },
-      { to: '/knowledge-bases', icon: BookOpen, label: 'Knowledge Bases' },
       { to: '/tools', icon: Wrench, label: 'Tools' },
       { to: '/audiences', icon: Users, label: 'Audiences' },
       { to: '/content-library', icon: Library, label: 'Content Library' },
