@@ -10,10 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import type { AgentConfiguration, InstructionStep as InstructionStepData } from '@/types/agent';
-import type { AgentKBAttachment } from '@/types/knowledgeBase';
 import { ALL_TOOLS } from '@/data/toolConstants';
 import type { ToolDefinition } from '@/types/tool';
-import { ConnectKnowledgeSourcesPanel } from './ConnectKnowledgeSourcesPanel';
 
 interface Props {
   config: AgentConfiguration;
@@ -89,10 +87,6 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
 
   const [globalToolIds, setGlobalToolIds] = useState<string[]>(
     () => config.globalToolIds ?? config.builtInTools ?? [],
-  );
-
-  const [kbAttachments, setKbAttachments] = useState<AgentKBAttachment[]>(
-    () => config.knowledgeBases ?? [],
   );
 
   const [transitionExpanded, setTransitionExpanded] = useState<Record<string, boolean>>(() => {
@@ -207,7 +201,6 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
       instructionSteps: normalizedSteps,
       globalToolIds,
       builtInTools: mergedToolIds,
-      knowledgeBases: kbAttachments,
     });
     onNext();
   };
@@ -476,12 +469,6 @@ export function InstructionsStep({ config, onSave, onNext, onPrev }: Props) {
           Add Step
         </button>
       </div>
-
-      {/* Connect knowledge sources — sibling to Global Tool Access. See docs/KB_SPEC.md §6 */}
-      <ConnectKnowledgeSourcesPanel
-        attachments={kbAttachments}
-        onChange={setKbAttachments}
-      />
 
       {/* Global Tool Access */}
       <div className="space-y-4">

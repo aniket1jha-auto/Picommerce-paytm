@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BookOpen, Plus, X, ExternalLink } from 'lucide-react';
+import { BookOpen, Plus, X, Users } from 'lucide-react';
 import {
   Modal,
   Button,
@@ -27,14 +26,11 @@ interface Props {
   onChange: (next: AgentKBAttachment[]) => void;
 }
 
-/**
- * "Connect knowledge sources" — inline within the Instructions step.
- * Sibling to Global Tool Access. Per docs/KB_SPEC.md §6 and ADR-driven
- * 2026-04-29 user direction (KB is not a wizard step).
- */
+type PickerMode = 'add' | 'reuse';
+
 export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
   const allKBs = useKnowledgeBaseStore((s) => s.knowledgeBases);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
 
   const attachedIds = useMemo(
     () => new Set(attachments.map((a) => a.knowledgeBaseId)),
@@ -46,10 +42,12 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
     return m;
   }, [allKBs]);
 
+  const reusableCount = allKBs.filter((kb) => !attachedIds.has(kb.id)).length;
+
   function addAttachment(kbId: string) {
     if (attachedIds.has(kbId)) return;
     onChange([...attachments, { knowledgeBaseId: kbId, ...DEFAULT_KB_ATTACHMENT }]);
-    setPickerOpen(false);
+    setPickerMode(null);
   }
 
   function detach(kbId: string) {
@@ -66,34 +64,29 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-primary">
-            Connect knowledge sources
+          <label className="mb-1 block text-sm font-semibold text-text-primary">
+            Knowledge for this agent
           </label>
           <p className="text-sm text-text-secondary">
-            Knowledge bases this agent can search during conversations. Each attachment
-            controls when retrieval fires and how chunks land in context.
+            Upload reference documents — playbooks, FAQs, product sheets — and the agent will look
+            things up while talking to customers.
           </p>
         </div>
         <Button
           variant="secondary"
           size="sm"
           iconLeft={<Plus size={14} />}
-          onClick={() => setPickerOpen(true)}
+          onClick={() => setPickerMode('add')}
         >
-          Connect
+          Add knowledge
         </Button>
       </div>
 
       {attachments.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border-default bg-surface-sunken p-5 text-center">
-          <BookOpen size={18} className="mx-auto mb-2 text-text-tertiary" />
+        <div className="rounded-md border border-dashed border-border-default bg-surface-sunken px-5 py-8 text-center">
+          <BookOpen size={20} className="mx-auto mb-2 text-text-tertiary" />
           <p className="text-[13px] text-text-secondary">
-            No knowledge sources connected. The agent will rely on its prompt and tools alone.
-          </p>
-          <p className="mt-1 text-[12px] text-text-tertiary">
-            <Link to="/knowledge-bases" className="hover:text-text-primary underline">
-              Browse knowledge bases →
-            </Link>
+            No reference documents added. The agent will rely on its instructions and tools alone.
           </p>
         </div>
       ) : (
@@ -113,9 +106,26 @@ export function ConnectKnowledgeSourcesPanel({ attachments, onChange }: Props) {
         </div>
       )}
 
+      <button
+        type="button"
+        onClick={() => setPickerMode('reuse')}
+        disabled={reusableCount === 0}
+        className={cn(
+          'inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors',
+          reusableCount === 0
+            ? 'text-text-tertiary cursor-not-allowed'
+            : 'text-accent hover:text-accent-hover',
+        )}
+      >
+        <Users size={12} />
+        <span className="border-b border-dashed border-current">
+          + Reuse a knowledge source from another agent ({reusableCount})
+        </span>
+      </button>
+
       <KBPickerModal
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        mode={pickerMode}
+        onClose={() => setPickerMode(null)}
         knowledgeBases={allKBs}
         attachedIds={attachedIds}
         onPick={addAttachment}
@@ -162,14 +172,12 @@ function AttachmentCard({ attachment, kb, onChange, onDetach }: AttachmentCardPr
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <BookOpen size={14} className="shrink-0 text-text-tertiary" />
-            <Link
-              to={`/knowledge-bases/${kb.id}`}
-              className="text-sm font-medium text-text-primary hover:text-accent inline-flex items-center gap-1 min-w-0"
+            <span
+              className="text-sm font-medium text-text-primary truncate"
               title={kb.name}
             >
-              <span className="truncate">{kb.name}</span>
-              <ExternalLink size={11} className="shrink-0 text-text-tertiary" />
-            </Link>
+              {kb.name}
+            </span>
             <StatusPill
               status={
                 kb.status === 'ready'
@@ -206,7 +214,6 @@ function AttachmentCard({ attachment, kb, onChange, onDetach }: AttachmentCardPr
         </button>
       </div>
 
-      {/* Settings row */}
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Select
           label="Retrieval"
@@ -270,14 +277,14 @@ function AttachmentCard({ attachment, kb, onChange, onDetach }: AttachmentCardPr
 /* ─── Picker modal ─────────────────────────────────────────────────────── */
 
 interface PickerProps {
-  open: boolean;
+  mode: PickerMode | null;
   onClose: () => void;
   knowledgeBases: KnowledgeBase[];
   attachedIds: Set<string>;
   onPick: (kbId: string) => void;
 }
 
-function KBPickerModal({ open, onClose, knowledgeBases, attachedIds, onPick }: PickerProps) {
+function KBPickerModal({ mode, onClose, knowledgeBases, attachedIds, onPick }: PickerProps) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -289,8 +296,10 @@ function KBPickerModal({ open, onClose, knowledgeBases, attachedIds, onPick }: P
     );
   }, [knowledgeBases, query]);
 
+  const title = mode === 'reuse' ? 'Reuse a knowledge source' : 'Add knowledge';
+
   return (
-    <Modal open={open} onClose={onClose} title="Connect a knowledge base" size="md">
+    <Modal open={mode !== null} onClose={onClose} title={title} size="md">
       <Input
         placeholder="Search…"
         value={query}

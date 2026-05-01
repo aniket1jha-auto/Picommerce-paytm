@@ -14,7 +14,7 @@ import type { AgentConfiguration } from '@/types/agent';
 
 const STEPS = [
   { id: 1, name: 'Basic Info', component: BasicInfoStep },
-  { id: 2, name: 'Model & Voice', component: ModelVoiceStep },
+  { id: 2, name: 'Voice', component: ModelVoiceStep },
   { id: 3, name: 'System Prompt', component: PromptStep },
   { id: 4, name: 'Instructions', component: InstructionsStep },
   { id: 5, name: 'Advanced Settings', component: AdvancedStep },
@@ -166,7 +166,7 @@ export function AgentBuilder({ mode = 'create' }: AgentBuilderProps) {
     const agentType = config.type;
     return [
       'Basic Info',
-      agentType === 'chat' ? 'Channel & Identity' : 'Model & Voice',
+      agentType === 'chat' ? 'Channel & Identity' : 'Voice',
       'System Prompt',
       'Instructions',
       'Advanced Settings',

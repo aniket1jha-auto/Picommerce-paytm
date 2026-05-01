@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Info, Sparkles } from 'lucide-react';
 import type { AgentConfiguration } from '@/types/agent';
+import type { AgentKBAttachment } from '@/types/knowledgeBase';
 import { PERSONALITY_TRAITS, TONE_OPTIONS, PROMPT_TEMPLATES } from '@/data/agentConstants';
+import { ConnectKnowledgeSourcesPanel } from './ConnectKnowledgeSourcesPanel';
 
 interface Props {
   config: AgentConfiguration;
@@ -18,6 +20,9 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
   const [objectives, setObjectives] = useState<string[]>(config.objectives);
   const [dos, setDos] = useState<string[]>(config.guidelines.dos);
   const [donts, setDonts] = useState<string[]>(config.guidelines.donts);
+  const [kbAttachments, setKbAttachments] = useState<AgentKBAttachment[]>(
+    () => config.knowledgeBases ?? [],
+  );
   const [showTemplates, setShowTemplates] = useState(!config.systemPrompt);
 
   const toggleTrait = (trait: string) => {
@@ -40,6 +45,7 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
       personality: { traits, tone, role },
       objectives,
       guidelines: { dos, donts },
+      knowledgeBases: kbAttachments,
     });
     onNext();
   };
@@ -203,6 +209,11 @@ export function PromptStep({ config, onSave, onNext, onPrev }: Props) {
             ))}
           </div>
         </div>
+
+        <ConnectKnowledgeSourcesPanel
+          attachments={kbAttachments}
+          onChange={setKbAttachments}
+        />
 
         <div>
           <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
