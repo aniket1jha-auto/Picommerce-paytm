@@ -883,11 +883,10 @@ export function ContentScheduleStep({ campaignData, onUpdate }: ContentScheduleS
         <p className="mt-0.5 text-xs text-text-secondary">
           Choose delivery mode first. Smart mode generates a cohort + channel + timing plan you can refine in the journey canvas.
         </p>
-        {/* Phase 4 D.1.5 — quick run offers one-time / recurring / smart_ai only.
-            Event-triggered sends belong in the journey canvas, not in a single-send wizard. */}
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <ScheduleModeCard id="one-time" title="One time" description="Send to this segment once at a specific time." />
           <ScheduleModeCard id="recurring" title="Recurring" description="Repeat send on a schedule (daily, weekly, monthly)." />
+          <ScheduleModeCard id="event" title="Event-based" description="Trigger when a user performs an action — sign-up, purchase, KYC step — or when an external system fires a webhook." />
           <ScheduleModeCard id="smart_ai" title="Smart + AI" description="Set a window. Our intelligence engine designs the sub-cohort + channel + timing plan with fallbacks." />
         </div>
       </div>
